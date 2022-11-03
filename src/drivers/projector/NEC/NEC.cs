@@ -15,13 +15,13 @@ using cave.utils;
     - Methods labeled with 'Async' suffix tend to return a Task and are expected to be 'await'ed.
     - Methods GetStatus, GetInfo, & GetErrors all run a Task that awaits one or more client.SendCommandAsync calls.
     
-    None of the methods return any data directly.  They call handleDeviceResponse which interprets certain responses
-    and stores the fetched data in one of our two data structures: "deviceStatus" for transient information like
-    current input, power on/off state & mute state; or "deviceInfo" for things which don't change often (or maybe ever)
-    like model, serial & lamp usage data.
+    Methods in this class don't use data directly returned by SendCommandAsync.  SendCommandAsync fires an event that
+    triggers handleDeviceResponse which interprets certain responses and maintains a store of fetched data in two structures:
+    "deviceStatus" for transient information like current input, power on/off state & mute state; or "deviceInfo" for things
+    which don't change often (or maybe ever) like model, serial & lamp usage data.
 
     Two timers call GetStatus and GetInfo with differing frequency and keep these data (more or less) up to date.
-    Ideally GetStatus should be called every couple seconds & GetInfo at least every hour or so to get updated lamp life remaining.
+    Ideally GetStatus should be called every couple seconds & GetInfo at least every hour or so to get updated lamp data.
 */
 
 namespace cave.drivers.projector.NEC {
@@ -316,7 +316,7 @@ namespace cave.drivers.projector.NEC {
 
 #endregion
 
-#region PrivateMethods
+#region Private methods
 
         /// <summary>
         /// Called when statusUpdateTimer elapses, retrieves device status.
@@ -360,9 +360,10 @@ namespace cave.drivers.projector.NEC {
         /// Entry point to processing of all Responses.  Checks the Response for bytes
         /// indicating success or failure and calls the appropriate handler.
         /// </summary>
-        private void handleDeviceResponse( object sender, ResponseEventArgs pr ) {
+        /// <param name="rea">ResponseEventArgs object containing the Response and the Command that was sent.</param>
+        private void handleDeviceResponse( object sender, ResponseEventArgs rea ) {
             // Log the response
-            Response response = pr.Response;
+            Response response = rea.Response;
             logger.LogDebug( "Response: {response}", response );
 
             if( response == null )
@@ -370,10 +371,10 @@ namespace cave.drivers.projector.NEC {
 
             // Interpret the response
             if( response.IndicatesFailure ) {
-                handleFailureResponses( pr );
+                handleFailureResponses( rea );
             }
             else if ( response.IndicatesSuccess ) {
-                handleSuccessResponses( pr );
+                handleSuccessResponses( rea );
             }
         }
 
@@ -382,9 +383,10 @@ namespace cave.drivers.projector.NEC {
         /// Gets the error code reported and logs whatever error message is
         /// associated with that code if any.
         /// </summary>
-        private void handleFailureResponses( ResponseEventArgs pr ) {
-            Response response = pr.Response;
-            Command command = pr.Command;
+        /// <param name="rea">ResponseEventArgs object containing the Response and the Command that was sent.</param>
+        private void handleFailureResponses( ResponseEventArgs rea ) {
+            Response response = rea.Response;
+            Command command = rea.Command;
 
             if( command != null ) {
                 // get error code at 6th & 7th bytes
@@ -405,9 +407,10 @@ namespace cave.drivers.projector.NEC {
         /// Checks which Command was run and whether the Response matches what we expect from that command,
         /// and calls the appropriate subhandler if so.
         /// </summary>
-        private void handleSuccessResponses( ResponseEventArgs pr ) {
-            Response response = pr.Response;
-            Command command = pr.Command;
+        /// <param name="rea">ResponseEventArgs object containing the Response and the Command that was sent.</param>
+        private void handleSuccessResponses( ResponseEventArgs rea ) {
+            Response response = rea.Response;
+            Command command = rea.Command;
 
             if( command != null ) {
                 logger.LogDebug( "Command '{name}' successful.", command.Name );
@@ -430,6 +433,7 @@ namespace cave.drivers.projector.NEC {
         /// Handles the response from a GetErrors command.
         /// Logs whatever projector errors were reported.
         /// </summary>
+        /// <param name="response">Response object representing Device's response</param>
         private void handleGetErrors( Response response ) {
             List<string> errors = parseErrors( response );
             if( errors.Count > 0 ) {
@@ -447,6 +451,7 @@ namespace cave.drivers.projector.NEC {
         /// and pair with error message strings.  Returns a list of strings matching the
         /// errors reported.
         /// </summary>
+        /// <param name="response">Response object representing Device's response</param>
         private List<string> parseErrors( Response response ) {
             List<string> errorsReported = new List<string>();
             var relevantBytes = response.Bytes[5..14];  // 6th thru 9th bytes of response
@@ -470,6 +475,7 @@ namespace cave.drivers.projector.NEC {
         /// Status data we need is extracted from the relevant response bytes
         /// and stored in the appropriate deviceStatus fields.
         /// </summary>
+        /// <param name="response">Response object representing Device's response</param>
         private void handleGetStatus( Response response ) {
             try {
                 deviceStatus.Power = (PowerState)response.Bytes[6];
@@ -495,6 +501,7 @@ namespace cave.drivers.projector.NEC {
         /// Gets a byte representing what was queried and the 4 bytes representing a 32-bit answer
         /// to the query from the Response and stores the returned data in the appropriate deviceInfo.Lamp field.
         /// </summary>
+        /// <param name="response">Response object representing Device's response</param>
         private void handleGetLampInfo( Response response ) {
             /* Bytes[5] is which lamp we were querying.  I don't have any projectors with more than one lamp.
                Supporting this is probably outside the scope of this project right now, so let's ignore it. */
@@ -531,6 +538,7 @@ namespace cave.drivers.projector.NEC {
         /// Handles the response for a GetModel command.
         /// Truncates off superfluous null bytes stored after the model name in the response.
         /// </summary>
+        /// <param name="response">Response object representing Device's response</param>
         private void handleGetModelInfo( Response response ) {
             var data = response.Bytes[5..37];
             /* Trim ending nulls */
@@ -541,6 +549,7 @@ namespace cave.drivers.projector.NEC {
         /// Handles the response for a GetSerial command.
         /// Truncates off superfluous null bytes stored after the serial number in the response.
         /// </summary>
+        /// <param name="response">Response object representing Device's response</param>
         private void handleGetSerialInfo( Response response ) {
             var data = response.Bytes[7..23];
             deviceInfo.SerialNumber = Encoding.UTF8.GetString(data).TrimEnd('\0');
@@ -596,12 +605,12 @@ namespace cave.drivers.projector.NEC {
 
         /// <summary>
         /// Checks to ensure that input is of a supported type and then selects that input.
+        /// </summary>
         /// <param name="input">An object representing the NEC.Input member.  These are one-byte numeric input codes, and as such
         /// the parameter can be an instance of NEC.Input, byte, 8-bit int, float/double < 255.0, or even string as long as that
         /// string can be parsed into an Input enum member by Enum.TryParse(...).  Parsing works by matching either the value or the member name.
         /// So SelectInput(NEC.Input.RGB1) works just as well as SelectInput(1), SelectInput("RGB1") or even SelectInput("1").
         /// It has its limits (doesn't seem to work with string representations of floating point numbers like "1.0").</param>
-        /// </summary>
         public async Task SelectInputAsync( object input ) {
             object necInput = input;
             if( Enum.TryParse( typeof(Input), input.ToString(), true, out necInput ) ) {
@@ -627,14 +636,14 @@ namespace cave.drivers.projector.NEC {
         }
 
         /// <summary>
-        /// Asynchronously sends a GetStatus command.  The Response will contain the device's
+        /// Updates device status.  The Response will contain the device's
         /// current power state, last selected input and whether video and/or audio are currently muted.
         /// </summary>
         public void GetStatus() {
             logger.LogDebug( "GetStatus() :: Sending command 'GetStatus'" );
             Task.Run( async () => {
                 await client.SendCommandAsync( Command.GetStatus );
-            });
+            } );
         }
 
         /// <summary>
@@ -686,14 +695,19 @@ namespace cave.drivers.projector.NEC {
         }
 
         /// <summary>
-        /// Asynchronously sends a GetErrors command
+        /// Gets what error states the device is currently reporting if any,
+        /// such as lamp in need of replacement, temperature error, etc.
         /// </summary>
         public void GetErrors() {
             logger.LogInformation( "Sending command 'GetErrors'" );
             Task.Run( async () => {
                 await client.SendCommandAsync( Command.GetErrors );
-            });
+            } );
         }
+
+#endregion
+
+#region Properties
 
         /// <summary>
         /// Retrieves the devices's last recorded power state.
@@ -714,7 +728,7 @@ namespace cave.drivers.projector.NEC {
         }
 
         /// <summary>
-        /// Retrieves the device's recorded model number.
+        /// Retrieves the device's model number.
         /// </summary>
         public string Model {
             get {
@@ -723,7 +737,7 @@ namespace cave.drivers.projector.NEC {
         }
 
         /// <summary>
-        /// Retrieves the device's recorded serial number.
+        /// Retrieves the device's serial number.
         /// </summary>
         public string Serial {
             get {
@@ -751,7 +765,7 @@ namespace cave.drivers.projector.NEC {
 
 #endregion
 
-#region TestCode
+#region Test code
 
         public void test() {
             logger.LogInformation("PowerStatus: {stat1}, InputStatus: {stat2}", PowerStatus, InputStatus);
@@ -767,9 +781,16 @@ namespace cave.drivers.projector.NEC {
 
 #endregion
 
-#region Theorizing
+#region Notes
 
-        /*
+        /* When trying to use an occasional synchronous SendCommand call between timer-executed GetStatus calls
+           that use SendCommandAsync, I found that the responses were getting mixed up between calls.
+           For ex. if the device is already powered off, and I call SendCommand(Command.PowerOff), it results
+           in an expected failure (error code (0x02,0x03)).  However, it reports that the command that was
+           executed that resulted in this failure was "GetStatus", not "PowerOff" as it should have been.
+           Maybe I'm missing something but I can't figure out why that would be unless it's something weird
+           going on with sync/async.  So I've switched to a 100% SendCommandAsync implementation.  I may
+           end up removing client.SendCommand altogether.
         */
 
 #endregion

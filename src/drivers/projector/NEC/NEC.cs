@@ -596,14 +596,17 @@ namespace cave.drivers.projector.NEC {
 
         /// <summary>
         /// Checks to ensure that input is of a supported type and then selects that input.
-        /// <param name="input">An object representing the NEC.Input.  These are one-byte input codes, and as such
-        /// the parameter can be an instance of NEC.Input, a byte, or an int.  If an int, the int is converted (truncated) to byte.</param>
+        /// <param name="input">An object representing the NEC.Input member.  These are one-byte numeric input codes, and as such
+        /// the parameter can be an instance of NEC.Input, byte, 8-bit int, float/double < 255.0, or even string as long as that
+        /// string can be parsed into an Input enum member by Enum.TryParse(...).  Parsing works by matching either the value or the member name.
+        /// So SelectInput(NEC.Input.RGB1) works just as well as SelectInput(1), SelectInput("RGB1") or even SelectInput("1").
+        /// It has its limits (doesn't seem to work with string representations of floating point numbers like "1.0").</param>
         /// </summary>
         public async Task SelectInputAsync( object input ) {
             object necInput = input;
-            if( necInput is int || necInput is byte || Enum.TryParse( typeof(Input), input.ToString(), true, out necInput ) ) {
+            if( Enum.TryParse( typeof(Input), input.ToString(), true, out necInput ) ) {
                 logger.LogInformation( "Sending command 'SelectInput({value})'", (Input)necInput );
-                await client.SendCommandAsync( Command.SelectInput, true, (Input)input );
+                await client.SendCommandAsync( Command.SelectInput, true, (Input)necInput );
             }
         }
 

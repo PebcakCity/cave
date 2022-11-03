@@ -56,9 +56,9 @@ namespace cave
         }
 
         private void Btn1Clicked(object sender, EventArgs a) { nec.PowerOnAndSelectInput( NEC.Input.RGB1 ); }
-        private void Btn2Clicked(object sender, EventArgs a) { nec.PowerOnAndSelectInput( NEC.Input.RGB2 ); }
-        private void Btn3Clicked(object sender, EventArgs a) { nec.PowerOnAndSelectInput( NEC.Input.HDMI1 ); }
-        private void Btn4Clicked(object sender, EventArgs a) { nec.PowerOnAndSelectInput( NEC.Input.Video ); }
+        private void Btn2Clicked(object sender, EventArgs a) { nec.PowerOnAndSelectInput( "RGB2" ); }
+        private void Btn3Clicked(object sender, EventArgs a) { nec.PowerOnAndSelectInput( "26" ); }
+        private void Btn4Clicked(object sender, EventArgs a) { nec.PowerOnAndSelectInput( 6.0 ); }
         private void Btn5Clicked(object sender, EventArgs a) { nec.GetStatus(); }
         private void Btn6Clicked(object sender, EventArgs a) { nec.GetInfo(); }
         private void Btn7Clicked(object sender, EventArgs a) { nec.test(); }

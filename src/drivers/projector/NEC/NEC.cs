@@ -629,7 +629,7 @@ namespace cave.drivers.projector.NEC {
                 if( PowerStatus != PowerState.PowerOn ) {
                     await PowerOnAsync();
                     /* Leave ample time, it takes several seconds before the device will start to respond after powering on */
-                    Thread.Sleep( 10000 );
+                    await Task.Delay( 10000 );
                 }
                 await SelectInputAsync( input );
             } );
@@ -655,38 +655,39 @@ namespace cave.drivers.projector.NEC {
         /// <param name="firstRun">Whether this is running as part of startup or not.</param>
         public void GetInfo( bool firstRun=false ) {
             Task.Run( async () => {
-                /* Increase this sleep duration if the first SendCommandAsync tends to time out.
+                /* Increase this delay if the first SendCommandAsync tends to time out.
                    With a lower duration, debug logging will sometimes show that the first request below
                    (for LampInfo.GoodForSeconds) times out. */
-                Thread.Sleep(1000);
+                await Task.Delay(1000);
+
                 logger.LogDebug( "Fetching lamp info..." );
 
                 logger.LogDebug( "...GoodForSeconds");
                 await client.SendCommandAsync( Command.GetLampInfo, true, DeviceInfo.Lamp.LampNumber.Lamp1, DeviceInfo.Lamp.LampInfo.GoodForSeconds );
 
-                Thread.Sleep(100);
+                await Task.Delay(100);
 
                 logger.LogDebug( "...UsageTimeSeconds");
                 await client.SendCommandAsync( Command.GetLampInfo, true, DeviceInfo.Lamp.LampNumber.Lamp1, DeviceInfo.Lamp.LampInfo.UsageTimeSeconds );
 
-                Thread.Sleep(100);
+                await Task.Delay(100);
 
                 logger.LogDebug( "...RemainingSeconds");
                 await client.SendCommandAsync( Command.GetLampInfo, true, DeviceInfo.Lamp.LampNumber.Lamp1, DeviceInfo.Lamp.LampInfo.RemainingSeconds );
 
-                Thread.Sleep(100);
+                await Task.Delay(100);
 
                 logger.LogDebug( "...RemainingPercent");
                 await client.SendCommandAsync( Command.GetLampInfo, true, DeviceInfo.Lamp.LampNumber.Lamp1, DeviceInfo.Lamp.LampInfo.RemainingPercent );
 
                 /* These won't suddenly change, so no need to query them every time */
                 if( firstRun ) {
-                    Thread.Sleep(100);
+                    await Task.Delay(100);
 
                     logger.LogDebug( "Fetching model #" );
                     await client.SendCommandAsync( Command.GetModel );
 
-                    Thread.Sleep(100);
+                    await Task.Delay(100);
 
                     logger.LogDebug( "Fetching serial #" );
                     await client.SendCommandAsync( Command.GetSerial );

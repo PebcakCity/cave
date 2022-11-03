@@ -222,7 +222,7 @@ namespace cave.drivers.projector.NEC {
             }
             Task.Run( async () => {
                 logger.LogDebug( "onDisconnected() :: {msg}", args.Message );
-                Thread.Sleep( reconnectDelay * 1000 );
+                await Task.Delay( reconnectDelay * 1000 );
                 await connectAsync();
             } );
         }
@@ -254,8 +254,7 @@ namespace cave.drivers.projector.NEC {
             logger.LogDebug( "Preparing command '{command}'", command.Name );
             var cmdBytes = command.Bytes.ToList();
             foreach( object arg in args ) {
-                if( // arg is int || arg is byte || 
-                    arg is NEC.Input || arg is NEC.DeviceInfo.Lamp.LampNumber || arg is NEC.DeviceInfo.Lamp.LampInfo ) {
+                if( arg is NEC.Input || arg is NEC.DeviceInfo.Lamp.LampNumber || arg is NEC.DeviceInfo.Lamp.LampInfo ) {
                     ++argsAppended;
                     cmdBytes.Add( Convert.ToByte(arg) );
                 } else {

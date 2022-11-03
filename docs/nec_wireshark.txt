@@ -1,0 +1,282 @@
+Wireshark results for 37 network frames sent/received by NEC's Naviset Administrator software during a refresh operation:
+
+#. Command called (manual page)
+Payload sent
+
+Payload Received
+(Interpretation)
+
+-------------------------------------------------------------------------
+
+1. Model name request (p. 66)
+0000   00 85 00 00 01 04 8a                              .......
+
+0000   20 85 01 40 20 4d 33 31 31 58 00 00 00 00 00 00    ..@ M311X......
+0010   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020   00 00 00 00 00 40                                 .....@
+
+
+2. Serial number request (p. 82)
+0000   00 bf 00 00 02 01 06 c8                           ........
+
+0000   e4 54 e8 60 3e 66 b4 2d 56 98 3a a3 08 00 45 00   .T.`>f.-V.:...E.
+0010   00 40 c8 a9 40 00 3e 06 bc c0 a1 1f 32 a3 a1 1f   .@..@.>.....2...
+0020   42 6c 1b e6 c4 b0 2a de 5b b5 40 97 7e ec 50 18   Bl....*.[.@.~.P.
+0030   0b 68 a9 1e 00 00 20 bf 01 40 12 01 06 33 37 30   .h.... ..@...370
+0040   30 34 35 33 46 41 00 00 00 00 00 00 00 26         0453FA.......&
+
+
+3. Setting request (p. 60)
+0000   00 85 00 00 01 00 86                              .......
+
+0000   20 85 01 40 20 13 03 13 01 02 3f 3c 03 30 00 00    ..@ .....?<.0..
+0010   00 30 00 00 00 00 00 00 00 00 00 00 00 00 00 00   .0..............
+0020   00 00 00 00 00 10                                 ......
+
+
+4. Information request (p. 32)
+0000   03 8a 00 00 00 8d                                 ......
+
+0000   23 8a 01 40 62 4d 33 36 31 20 53 65 72 69 65 73   #..@bM361 Series
+0010   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0030   00 00 00 00 00 00 4e 6f 74 20 53 75 70 70 6f 72   ......Not Suppor
+0040   74 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   t...............
+0050   00 00 00 00 00 00 00 f4 ad 4e 00 f4 ad 4e 00 f4   .........N...N..
+0060   ad 4e 00 f4 ad 4e 00 cc                           .N...N..
+
+
+5. Lamp information request (p. 34 - 35)
+0000   03 96 00 00 02 00 01 9c                           ........
+                          ^ Usage time in seconds
+                       ^ Lamp 1
+0000   23 96 01 40 06 00 01(f4 ad 4e 00)f0               #..@.....N..
+                            515,634 (seconds)
+                            ~ 1432 hours
+
+
+6. Filter usage information request (p. 33)
+0000   03 95 00 00 00 98                                 ......
+
+0000   23 95 01 40 08(f4 ad 4e 00)00 97 49 01 d1         #..@...N...I..
+                      515,634 (seconds)
+                      ~ 1432 hours
+
+
+7. Estimated lamp life remaining (Undocumented, but Naviset Administrator confirms this)
+0000   03 96 00 00 02 00 08 a3                           ........
+                          ^ (Undocumented parameter)
+0000   23 96 01 40 06 00 08(8c fa c3 00)51               #..@.......Q
+                            12,843,660 (seconds)
+                            ~ 3567 hours
+
+
+8. Estimated lamp life total (in seconds) ??
+0000   03 96 00 00 02 00 02 9d                           ........
+                          ^ (Undocumented parameter)
+0000   23 96 01 40 06 00 02(80 a8 12 01)3d               #..@.......=
+                            18,000,000 (seconds)
+                            Works out to 5000 hours (5000 * 3600 seconds)
+
+
+9. Error status request (p. 13 - 14)
+0000   00 88 00 00 00 88                                 ......
+
+0000   20 88 01 40 0c(00 00 00 00 00 00 00 00 00 00 00    ..@............
+0010   00)f5                                             ..
+(no errors detected)
+
+
+10. Basic information request (p. 83 - 84)
+0000   00 bf 00 00 01 02 c2                              .......
+
+0000   20 bf 01 40 10 02 00 01 01 06 ff 00 00 ff 00 00    ..@............
+0010   00 00 00 00 00 38                                 .....8
+
+                                                  ^ Picture freeze off
+                                               ^ On-screen mute unsupported? (undocumented value 0xFF)
+                                            ^ Audio mute off
+                                         ^ Video mute off
+                                      ^ Not video
+                                   ^ Sig. sel. type 2 (HDMI, as documented only in the appendix on input status / basic info request, p. 30)
+                                ^ Signal select type 1
+                             ^ No signal
+                          ^ Standby mode
+
+
+11. ??? who knows ???
+0000   03 99 00 00 01 00 9d                              .......
+
+0000   23 99 01 40 05 00 00 00 00 00 02                  #..@.......
+
+
+12. ??? who knows ???
+0000   03 99 00 00 01 01 9e                              .......
+
+0000   23 99 01 40 05 01 00 00 00 00 03                  #..@.......
+
+
+13. Repeated "Basic information request", same results
+
+
+14. Firmware version check ?? (Undocumented, but it checks out & Naviset Administrator confirms)
+0000   00 bf 00 00 02 01 02 c4                           ........
+
+0000   20 bf 01 40 12 01 02 56 65 72 31 2e 30 30 2e 30    ..@...Ver1.00.0
+0010   31 35 00 00 00 00 00 e5                           15......
+
+
+15. Information string request (p. 69)
+0000   00 d0 00 00 03 00 03 01 d7                        .........
+                    ^ Horizontal synchronous frequency, whatever that means
+
+0000   a0 d0 01 40 02 02 03 b8                           ...@....
+
+Manual says: "Gets the information strings (English) displayed on the projector."
+(First byte begins with 'a', indicates this command errored, probably because the projector is currently powered off)
+
+
+16. ?
+0000   00 c0 00 00 00 c0                                 ......
+
+0000   20 c0 01 40 80 13 01 00 00 00 ff 01 06 ff 00 00    ..@............
+0010   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020   00 00 00 ff 00 00 ff 3f 3c 03 30 00 00 00 30 00   .......?<.0...0.
+0030   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0040   00 00 00 00 00 00 ff ff 00 00 03 13 ff ff ff 00   ................
+0050   ff 00 00 00 00 00 ff ff ff 01 00 ff 07 ff 00 00   ................
+0060   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0070   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0080   00 00 00 00 00 a9                                 ......
+
+
+17. Another basic information request
+
+
+
+18. Carbon savings info request (p. 36 - 37)
+0000   03 9a 00 00 01 00 9e                              .......
+                    ^ Total carbon savings
+
+0000   23 9a 01 40 09 00(01 00 00 00)(fa 52 09 00)5d      #..@.......R..]
+
+                                      ^ Milligram (611,066 mg)
+                         ^ Kilogram (1 Kg)
+                       ^ Total carbon savings
+
+
+19. (Repeated carbon savings info request)
+
+20. (again)
+
+21. (again...)
+
+22. ?
+0000   03 04 00 00 03 00 00 00 0a                        .........
+
+0000   23 04 01 40 0d 01 7f 00 00 00 3f 00 00 00 01 00   #..@......?.....
+0010   01 00 36                                          ..6
+
+
+23. ??
+0000   03 04 00 00 03 01 00 00 0b                        .........
+
+0000   23 04 01 40 0d 01 7f 00 00 00 3f 00 00 00 01 00   #..@......?.....
+0010   01 00 36                                          ..6
+
+
+24. ???
+0000   03 04 00 00 03 04 00 00 0e                        .........
+
+0000   23 04 01 40 0d 01 0f 00 00 00 07 00 00 00 01 00   #..@............
+0010   01 00 8e                                          ...
+
+
+25. ????
+0000   03 04 00 00 03 03 00 00 0d                        .........
+
+0000   23 04 01 40 0d 01 3f 00 00 00 1f 00 3f 00 01 00   #..@..?.....?...
+0010   01 00 15                                          ...
+
+
+26. ?????
+0000   03 04 00 00 03 02 00 00 0c                        .........
+
+0000   23 04 01 40 0d 01 3f 00 00 00 1f 00 00 00 01 00   #..@..?.........
+0010   01 00 d6                                          ...
+
+
+27. Mute status request (p. 64 - 65)
+0000   00 85 00 00 01 03 89                              .......
+
+0000   20 85 01 40 10 00 00 ff ff ff ff 00 00 00 00 00    ..@............
+0010   00 00 00 00 00 f2                                 ......
+                                      ^ System reserved (bytes 6 - 16)
+                                   ^ Onscreen display (unsupported)
+                                ^ Forced onscreen mute (unsupported)
+                             ^ Onscreen mute (unsupported)
+                          ^ Sound mute (off)
+                       ^ Picture mute (off)
+
+
+28. Another basic information request
+
+29. ??????
+0000   03 04 00 00 03 05 00 00 0f                        .........
+
+0000   23 04 01 40 0d 01 1f 00 00 00 0b 00 0a 00 01 00   #..@............
+0010   01 00 ac                                          ...
+
+
+30. ???????
+0000   03 04 00 00 03 53 00 00 5d                        .....S..]
+
+0000   a3 04 01 40 02 01 00 eb                           ...@....
+(this one errored)
+
+
+31. ????????
+0000   03 04 00 00 03 18 00 00 22                        ........"
+
+0000   a3 04 01 40 02 01 00 eb                           ...@....
+(this one too)
+
+
+32. ...
+0000   03 04 00 00 03 15 01 00 20                        ........ 
+
+0000   23 04 01 40 0d 01 3c 00 c4 ff 00 00 00 00 01 00   #..@..<.........
+0010   01 00 77                                          ..w
+
+
+33. ?
+0000   03 b0 00 00 01 0a be                              .......
+
+0000   a3 b0 01 40 02 00 01 97                           ...@....
+(whatever it was, it failed)
+
+
+34.
+0000   03 b0 00 00 01 1a ce                              .......
+
+0000   23 b0 01 40 02 1a 00 30                           #..@...0
+
+
+35. Eco mode request (p. 70)
+0000   03 b0 00 00 01 07 bb                              .......
+
+0000   23 b0 01 40 02 07(00)1d                           #..@....
+                          ^ Data (whatever it means, guessing it means eco mode is off because it is)
+
+36. 
+0000   03 b0 00 00 01 09 bd                              .......
+
+0000   23 b0 01 40 02 09 00 1f                           #..@....
+
+
+37. Lan MAC address status request (p. 72)
+0000   03 b0 00 00 02 9a 00 4f                           .......O
+
+0000   23 b0 01 40 08 9a 00(58 c2 32 f8 83 19)96         #..@...X.2....
+                             ^ MAC address
+

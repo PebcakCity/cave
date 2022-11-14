@@ -2,32 +2,30 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 
-using cave.drivers.projector;
-using cave.utils;
 
 /*
     Overall design:
     - Methods labeled with no suffix call and await async ones (PowerOn runs a Task that awaits PowerOnAsync, etc).
     - Methods labeled with 'Async' suffix tend to return a Task and are expected to be 'await'ed.
-    - Methods GetStatus, GetInfo, & GetErrors all run a Task that awaits one or more client.SendCommandAsync calls.
+    - Methods GetStatus, GetInfo, & GetErrors all run Tasks that await one or more client.SendCommandAsync calls.
     
-    Methods in this class don't use data directly returned by SendCommandAsync.  SendCommandAsync fires an event that
-    triggers handleDeviceResponse which interprets certain responses and maintains a store of fetched data in two structures:
-    "deviceStatus" for transient information like current input, power on/off state & mute state; or "deviceInfo" for things
-    which don't change often (or maybe ever) like model, serial & lamp usage data.
-
+    When a command is sent via Client.SendCommandAsync, a ResponseReceived event is fired containing the response sent back
+    from the device, if any.  This class listens for ResponseReceived and processes responses as they arrive.  Data returned
+    in these responses is stored in one of two private device state classes -- deviceStatus contains state which changes
+    frequently such as power, mute & input states, and deviceInfo contains state which changes less frequently (or not at all)
+    such as lamp usage, model & serial number.
+    
     Two timers call GetStatus and GetInfo with differing frequency and keep these data (more or less) up to date.
-    Ideally GetStatus should be called every couple seconds & GetInfo at least every hour or so to get updated lamp data.
+    Ideally GetStatus should be called every couple seconds & GetInfo at least every hour or so to get updated lamp usage.
 */
 
 namespace cave.drivers.projector.NEC {
 
     /// <summary>
-    /// Driver class for NEC projectors
+    /// Controller class for NEC projectors
     /// </summary>
     public partial class NEC: IProjector {
 
@@ -783,16 +781,6 @@ namespace cave.drivers.projector.NEC {
 #endregion
 
 #region Notes
-
-        /* When trying to use an occasional synchronous SendCommand call between timer-executed GetStatus calls
-           that use SendCommandAsync, I found that the responses were getting mixed up between calls.
-           For ex. if the device is already powered off, and I call SendCommand(Command.PowerOff), it results
-           in an expected failure (error code (0x02,0x03)).  However, it reports that the command that was
-           executed that resulted in this failure was "GetStatus", not "PowerOff" as it should have been.
-           Maybe I'm missing something but I can't figure out why that would be unless it's something weird
-           going on with sync/async.  So I've switched to a 100% SendCommandAsync implementation.  I may
-           end up removing client.SendCommand altogether.
-        */
 
 #endregion
 

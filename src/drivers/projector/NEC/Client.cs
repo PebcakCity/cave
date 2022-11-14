@@ -8,42 +8,23 @@ using System.Threading;
 using System.Threading.Tasks;
 
 
-/*
-
-Socket errors that are fatal and require opening a new one:
-    - Broken Pipe / "Shutdown" - "A broken pipe error is seen when the remote end of the connection is closed gracefully.
-        Solution: This exception usually arises when the socket operations performed on either end are not synced."
-        https://www.java67.com/2019/02/7-common-socket-errors-and-exception-in-java.html
-        
-        Basically this will happen after sending malformed commands and trying to read responses that never arrive.
-
-    - Connection Reset - "This exception appears when the remote connection is unexpectedly and forcefully closed due
-        to various reasons like application crashes, system reboot, the hard close of the remote host. Kernel from
-        the remote system sends out packets with the RST bit to the local system."
-        https://www.java67.com/2019/02/7-common-socket-errors-and-exception-in-java.html
-
-        "SocketError.ConnectionReset / WSAECONNRESET / 10054 - The remote side has abortively closed the connection.
-        This is commonly caused by the remote process exiting or the remote computer being shut down. However, some
-        software (especially server software) is written to abortively close connections as a normal practice, since
-        this does reclaim server resources more quickly than a graceful close. Therefore, this is not necessarily
-        indicative of an actual error condition; if the communication was complete (and the socket was about to be
-        closed anyway), then this error should just be ignored."
-        https://blog.stephencleary.com/2009/05/error-handling.html
-        
-        Powering off some NEC projectors (including the one I'm testing with) will cause them to close a socket this way.
-
-*/
-
 namespace cave.drivers.projector.NEC {
 
+    /// <summary>
+    /// Argument passed when a connection is made or broken, contains a message to display/log.
+    /// </summary>
     public class ClientConnectionEventArgs: EventArgs {
         public string Message { get; set; }
         public ClientConnectionEventArgs( string message ) { Message = message; }
     }
 
+    /// <summary>
+    /// NEC projector network connection client.  Handles all connection details
+    /// as well as sending/receiving data.
+    /// </summary>
     public class Client {
 
-#region PrivateFields
+#region Private fields
 
         private IPAddress ipAddress;
         private Socket socket;
@@ -57,7 +38,7 @@ namespace cave.drivers.projector.NEC {
 
 #endregion
 
-#region PublicFields
+#region Public fields
 
         public string Address;
         public int Port;
@@ -111,49 +92,10 @@ namespace cave.drivers.projector.NEC {
 
 #endregion
 
-#region PrivateMethods
-
-        /// <summary>
-        /// Synchronously attempts to connect to the device
-        /// and notifies subscribers to ClientConnected if successful.
-        /// Currently unused.
-        /// </summary>
-        /// <param name="retriesAllowed">Number of times to retry before giving up.</param>
-        /// <param name="timeout">Time (in seconds) before a retry attempt is canceled.</param>
-        private void connect( int retriesAllowed=3 ) {
-            int attempts = 0;
-            if( socket != null ) 
-                socket.Close();
-            socket = new Socket(
-                AddressFamily.InterNetwork,
-                SocketType.Stream,
-                ProtocolType.Tcp
-            );
-            while( !socket.Connected && attempts < retriesAllowed ) {
-                try {
-                    ++attempts;
-                    socket.Connect( ipAddress, Port );
-                    logger.LogInformation( "Connected to {addr}:{port}", Address, Port );
-
-                    /* Notify subscriber (NEC) to begin communications */
-                    if( ClientConnected != null )
-                        ClientConnected( this, new ClientConnectionEventArgs( $"Connected to {Address}:{Port}" ) );
-
-                    socket.SendTimeout = 500;
-                    socket.ReceiveTimeout = 1000;
-
-                } catch( Exception ex ) {
-                    logger.LogError( "connect() :: (Attempt #{a}) Error connecting to device: {msg}", attempts, ex.Message );
-                }
-            }
-            if( !socket.Connected ) {
-                logger.LogError( "connect(retriesAllowed={r}) :: Fatal: Failed to connect to device.", retriesAllowed );
-            }
-        }
+#region Private methods
 
         /// <summary>
         /// Closes an existing socket and notifies subscribers to ClientDisconnected.
-        /// Currently unused
         /// </summary>
         private void disconnect() {
             if( socket != null ) {
@@ -211,7 +153,7 @@ namespace cave.drivers.projector.NEC {
 
         /// <summary>
         /// Used by SendCommandAsync on certain socket errors to notify the device class that
-        /// the device has closed the socket and that it should cease sending status update commands 
+        /// the device has closed the socket and that it should cease sending status update requests 
         /// while we are disconnected.  It also calls connectAsync() to attempt to reconnect with
         /// the default timeout and number of retries.
         /// </summary>
@@ -228,7 +170,7 @@ namespace cave.drivers.projector.NEC {
         }
 
         /// <summary>
-        /// Computes and returns the one-byte checksum of a byte sequence.
+        /// Computes and returns the one-byte checksum of a byte enumerable.
         /// </summary>
         /// <param name="bytes">An IEnumerable<byte> object</param>
         private byte checksum( IEnumerable<byte> bytes ) {
@@ -239,16 +181,14 @@ namespace cave.drivers.projector.NEC {
         }
 
         /// <summary>
-        /// Helper for SendCommand/SendCommandAsync.
-        /// Appends optional arguments and an optional checksum to a Command and returns its new byte array.
-        /// If arguments are appended to the command, checksum is calculated and appended regardless,
-        /// as failing to include the checksum will cause the command to error and can have negative
-        /// repercussions on maintaining connection integrity (the device can drop the connection if it gets out of sync).
+        /// Helper for SendCommandAsync.
+        /// Appends optional arguments and an optional checksum to a Command and returns the new byte array.
+        /// If arguments are appended to the command, checksum is calculated and appended regardless.
         /// </summary>
-        /// <param name="command">The NEC.Command object to append to.</param>
+        /// <param name="command">The NEC.Command object to prepare.</param>
         /// <param name="checksum">Whether a checksum is required by this command
         ///     (should be true if args is non-empty or command will fail).</param>
-        /// <param name="args">A list of single-byte arguments to append before the checksum is appended.</param>
+        /// <param name="args">Arguments to the command, either passed separately or as an array.</param>
         private byte[] prepareCommand( Command command, bool checksum, params object[] args ){
             int argsAppended = 0;
             logger.LogDebug( "Preparing command '{command}'", command.Name );
@@ -258,7 +198,7 @@ namespace cave.drivers.projector.NEC {
                     ++argsAppended;
                     cmdBytes.Add( Convert.ToByte(arg) );
                 } else {
-                    logger.LogError("prepareCommand() :: Argument type unrecognized: {arg}", arg);
+                    logger.LogError("prepareCommand() :: Argument type unsupported: {arg}", arg.GetType().ToString());
                 }
             }
             if( checksum || argsAppended > 0 )
@@ -269,60 +209,15 @@ namespace cave.drivers.projector.NEC {
 
 #endregion
 
-#region PublicMethods
-
+#region Public methods
 
         /// <summary>
-        /// Send a Command sychronously and return the Response.
-        /// Currently unused.
+        /// Sends a Command and awaits the Response asynchronously.
         /// </summary>
         /// <param name="command">The NEC.Command to send.</param>
         /// <param name="checksumRequired">Whether a checksum is required by this command
         ///     (should be true if args is non-empty or command will fail).</param>
-        /// <param name="args">A list of single-byte arguments to append before the checksum is appended.</param>
-        public Response SendCommand( Command command, bool checksumRequired=false, params object[] args ) {
-            try {
-                socket.Send( prepareCommand( command, checksumRequired, args ) );
-                int bytesRead = socket.Receive( readBuffer, 0, readBuffer.Length, SocketFlags.None );
-                if( bytesRead <= 0 ) {
-                    logger.LogError( $"SendCommand({command.Name}) :: Failed to get a response, check device connection." );
-                    /* Should contain whatever actual socket error last occurred if one actually did occur */
-                    throw new SocketException();
-                }
-                else {
-                    byte[] dataReceived = new byte[bytesRead];
-                    Buffer.BlockCopy( readBuffer, 0, dataReceived, 0, bytesRead );
-                    return Response.FromBytes( dataReceived );
-                } 
-            } catch( SocketException ex ) {
-                
-                /* Only attempt to reconnect if it's determined that the projector hung up on us, either correctly or incorrectly.
-                   Otherwise it stays bound to the old socket and we'll keep failing to reconnect on a new socket.
-
-                   Check if the error code matches the local system's ECONNRESET ("connection reset by peer") or EPIPE (Unix's "broken pipe") code.
-                   .NET maps ECONNRESET to SocketError.ConnectionReset and EPIPE to SocketError.Shutdown */
-
-                if( ex.SocketErrorCode == SocketError.ConnectionReset ||
-                    ex.SocketErrorCode == SocketError.Shutdown )
-                    onDisconnected( this, new ClientConnectionEventArgs( $"Connection dumped by device. Attempting to reconnect in {reconnectDelay}s..." ) );
-                else
-                    logger.LogError( $"SendCommand({command.Name}) :: SocketException ({(int)ex.SocketErrorCode}) occurred!!!: {ex.Message}" );
-
-            } catch( Exception ex ) {
-                logger.LogError( $"SendCommand({command.Name}) :: Exception occurred: {ex.Message}" );
-            }
-
-            return null;
-        }
-
-
-        /// <summary>
-        /// Send a Command and await the Response asynchronously.
-        /// </summary>
-        /// <param name="command">The NEC.Command to send.</param>
-        /// <param name="checksumRequired">Whether a checksum is required by this command
-        ///     (should be true if args is non-empty or command will fail).</param>
-        /// <param name="args">A list of single-byte arguments to append before the checksum is appended.</param>
+        /// <param name="args">Arguments to the command, either passed separately or as an array.</param>
         public async Task<Response> SendCommandAsync( Command command, bool checksumRequired=false, params object[] args ) {
             try{
                 CancellationTokenSource cts = new();

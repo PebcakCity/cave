@@ -2,8 +2,6 @@ using System;
 using Gtk;
 using UI = Gtk.Builder.ObjectAttribute;
 using Microsoft.Extensions.Logging;
-using System.Threading;
-using System.Threading.Tasks;
 
 using cave.drivers.projector.NEC;
 
@@ -46,7 +44,7 @@ namespace cave
                 string ip = Environment.GetEnvironmentVariable("NECTESTIP");
                 nec = new NEC( this, ip );
             } catch( Exception ex ) {
-                logger.LogError("Failed to instantiate NEC device driver: {error}", ex.Message);
+                logger.LogError("Failed to instantiate NEC controller: {error}", ex.Message);
             }
         }
 

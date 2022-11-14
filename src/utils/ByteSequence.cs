@@ -32,9 +32,7 @@ namespace cave {
                 } else if( obj is ByteSequence other ) {
                     bool typeMatches = this.GetType().Equals( obj.GetType() );
                     bool bytesMatch = this.Bytes.SequenceEqual( other.Bytes );
-                    if( typeMatches && bytesMatch ) {
-                        return true;
-                    }
+                    return (typeMatches && bytesMatch);
                 }
                 return false;
             }

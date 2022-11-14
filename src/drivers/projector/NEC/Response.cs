@@ -77,19 +77,13 @@ namespace cave.drivers.projector.NEC {
 
         public bool IndicatesSuccess {
             get {
-                if( (this.Bytes[0] >> 4) == 0x02 )
-                    return true;
-                else
-                    return false;
+                return (this.Bytes[0] >> 4 == 0x02 );
             }
         }
 
         public bool IndicatesFailure {
             get {
-                if( (this.Bytes[0] >> 4) == 0x0a )
-                    return true;
-                else
-                    return false;
+                return (this.Bytes[0] >> 4 == 0x0a );
             }
         }
 

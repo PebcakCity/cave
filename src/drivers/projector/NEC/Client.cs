@@ -31,6 +31,7 @@ namespace cave.drivers.projector.NEC {
         private const int READ_BUFFER_SIZE = 512;
         private byte[] readBuffer = new byte[READ_BUFFER_SIZE];
         private int reconnectDelay = 5;
+        private bool lastCommandTimedOut;
 
         private NEC device;
         private MainWindow window;
@@ -256,7 +257,6 @@ namespace cave.drivers.projector.NEC {
 
                     Response response = new Response( dataReceived );
 
-                    /* For flexibility, we can use an event-driven model based on the ResponseReceived event... */
                     if( ResponseReceived != null ) {
                         ResponseReceived(
                             this,
@@ -266,7 +266,11 @@ namespace cave.drivers.projector.NEC {
                              )
                         );
                     }
-                    /* ...or a direct return of type Task<Response>.  It is up to the caller to decide how to receive the response. */
+                    if( lastCommandTimedOut && ClientConnected != null ) {
+                        lastCommandTimedOut = false;
+                        ClientConnected( this, new ClientConnectionEventArgs("Connection reestablished?") );
+                    }
+
                     return response;
                 }
             } catch( SocketException ex ) {
@@ -284,6 +288,7 @@ namespace cave.drivers.projector.NEC {
                         onDisconnected( this, new ClientConnectionEventArgs( $"SendCommandAsync({command.Name}) :: Broken connection." ), true );
                         break;
                     case SocketError.OperationAborted:
+                        lastCommandTimedOut = true;
                         onDisconnected( this, new ClientConnectionEventArgs( $"SendCommandAsync({command.Name}) :: Operation timed out." ), false );
                         break;
                     default:
@@ -294,6 +299,7 @@ namespace cave.drivers.projector.NEC {
             } catch( Exception ex ) {
                 switch( ex ) {
                     case OperationCanceledException _:
+                        lastCommandTimedOut = true;
                         onDisconnected( this, new ClientConnectionEventArgs( $"SendCommandAsync({command.Name}) :: Operation timed out." ), false);
                         break;
                     default:

@@ -166,19 +166,22 @@ namespace cave.drivers.projector.NEC {
         /// <summary>
         /// Used by SendCommandAsync on certain socket errors to notify the device class that
         /// the device has closed the socket and that it should cease sending status update requests 
-        /// while we are disconnected.  It also calls connectAsync() to attempt to reconnect with
-        /// the default timeout and number of retries.
+        /// while we are disconnected.  It also checks to see if we should attempt to reconnect.
         /// </summary>
-        private void onDisconnected( object sender, ClientConnectionEventArgs args ) {
+        /// <param name="args">ClientConnectionEventArgs object containing a string explaning what's happened.</param>
+        /// <param name="reconnect">Whether to attempt to reconnect immediately.</param>
+        private void onDisconnected( object sender, ClientConnectionEventArgs args, bool reconnect=true ) {
             /* Notify subscriber (NEC) */
             if( ClientDisconnected != null ){
                 ClientDisconnected( this, args );
             }
-            Task.Run( async () => {
-                logger.LogDebug( "onDisconnected() :: {msg}", args.Message );
-                await Task.Delay( reconnectDelay * 1000 );
-                await connectAsync();
-            } );
+            if( reconnect ) {
+                Task.Run( async () => {
+                    logger.LogWarning( $"Attempting to reconnect in {reconnectDelay}s..." );
+                    await Task.Delay( reconnectDelay * 1000 );
+                    await connectAsync();
+                } );
+            }
         }
 
         /// <summary>
@@ -275,13 +278,13 @@ namespace cave.drivers.projector.NEC {
                    .NET maps ECONNRESET to SocketError.ConnectionReset and EPIPE to SocketError.Shutdown */
                 switch( ex.SocketErrorCode ) {
                     case SocketError.ConnectionReset:
-                        onDisconnected( this, new ClientConnectionEventArgs( $"SendCommandAsync({command.Name}) :: Connection dumped by device. Attempting to reconnect in {reconnectDelay}s..." ) );
+                        onDisconnected( this, new ClientConnectionEventArgs( $"SendCommandAsync({command.Name}) :: Connection dumped by device." ), true );
                         break;
                     case SocketError.Shutdown:
-                        onDisconnected( this, new ClientConnectionEventArgs( $"SendCommandAsync({command.Name}) :: Broken connection, attempting to reconnect in {reconnectDelay}s..." ) );
+                        onDisconnected( this, new ClientConnectionEventArgs( $"SendCommandAsync({command.Name}) :: Broken connection." ), true );
                         break;
                     case SocketError.OperationAborted:
-                        logger.LogWarning( $"SendCommandAsync({command.Name}) :: Operation timed out." );
+                        onDisconnected( this, new ClientConnectionEventArgs( $"SendCommandAsync({command.Name}) :: Operation timed out." ), false );
                         break;
                     default:
                         logger.LogError( $"SendCommandAsync({command.Name}) :: SocketException ({(int)ex.NativeErrorCode}) occurred!!!: {ex.Message}" );
@@ -289,7 +292,14 @@ namespace cave.drivers.projector.NEC {
                 }
 
             } catch( Exception ex ) {
-                logger.LogError( $"SendCommandAsync({command.Name}) :: Exception occurred: {ex.Message}" );
+                switch( ex ) {
+                    case OperationCanceledException _:
+                        onDisconnected( this, new ClientConnectionEventArgs( $"SendCommandAsync({command.Name}) :: Operation timed out." ), false);
+                        break;
+                    default:
+                        logger.LogError( $"SendCommandAsync({command.Name}) :: Exception occurred: {ex.Message}" );
+                        break;
+                }
             }
 
             return null;

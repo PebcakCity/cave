@@ -113,25 +113,28 @@ namespace cave.drivers.projector.NEC {
         /// <param name="timeout">Time (in seconds) before a retry attempt is canceled.</param>
         private async Task connectAsync( int retriesAllowed=5, int timeout=3 ) {
             int attempts = 0;
+            bool connected = false;
 
             if( socket != null ) {
                 socket.Close();
             }
 
-            socket = new Socket(
-                AddressFamily.InterNetwork,
-                SocketType.Stream,
-                ProtocolType.Tcp
-            );
-
-            while( !socket.Connected && attempts < retriesAllowed ) {
+            while( !connected && attempts < retriesAllowed ) {
                 try {
                     ++attempts;
+
+                    socket = new Socket(
+                        AddressFamily.InterNetwork,
+                        SocketType.Stream,
+                        ProtocolType.Tcp
+                    );
+
                     CancellationTokenSource cts = new();
                     cts.CancelAfter(timeout * 1000);
                     var token = cts.Token;
 
                     await socket.ConnectAsync( ipAddress, Port, token );
+                    connected = true;
                     logger.LogInformation( "Connected to {addr}:{port}", Address, Port );
 
                     /* Notify subscriber (NEC) to begin communications */
@@ -141,13 +144,22 @@ namespace cave.drivers.projector.NEC {
                     /* These timeouts are for sync operations, no bearing on async ones */
                     socket.SendTimeout = 500;
                     socket.ReceiveTimeout = 1000;
-                    
+                } catch( OperationCanceledException ) {
+                    logger.LogWarning( "connectAsync() :: (Attempt #{attempt}) Timed out.", attempts );
                 } catch( Exception ex ) {
-                    logger.LogError( "connectAsync() :: (Attempt #{a}) Error connecting to device: {msg}", attempts, ex.Message );
+                    logger.LogError( "connectAsync() :: (Attempt #{attempt}) {errorType} : {errorMsg}", attempts, ex.GetType(), ex.Message );
                 }
             }
             if( !socket.Connected ) {
                 logger.LogError( "connectAsync(retriesAllowed={r}, timeout={t}) :: Fatal: Failed to connect to device.", retriesAllowed, timeout );
+                /* After finally failing to connect, leave behind a fresh unopened socket.
+                   Future attempts to send/receive on this socket (ie. user clicks button) will fail
+                   with SocketError.Shutdown, causing another cycle of connection attempts. */
+                socket = new Socket(
+                    AddressFamily.InterNetwork,
+                    SocketType.Stream,
+                    ProtocolType.Tcp
+                );
             }
         }
 
@@ -261,23 +273,25 @@ namespace cave.drivers.projector.NEC {
 
                    Check if the error code matches the local system's ECONNRESET ("connection reset by peer") or EPIPE (Unix's "broken pipe") code.
                    .NET maps ECONNRESET to SocketError.ConnectionReset and EPIPE to SocketError.Shutdown */
-
-                if( ex.SocketErrorCode == SocketError.ConnectionReset ||
-                    ex.SocketErrorCode == SocketError.Shutdown )
-                    /* Handle this a little softer in the log, don't log an actual error */
-                    onDisconnected( this, new ClientConnectionEventArgs( $"Connection dumped by device. Attempting to reconnect in {reconnectDelay}s..." ) );
-                else
-                    /* Anything else should be shouted from the rooftops */ 
-                    logger.LogError( $"SendCommandAsync({command.Name}) :: SocketException ({(int)ex.SocketErrorCode}) occurred!!!: {ex.Message}" );
+                switch( ex.SocketErrorCode ) {
+                    case SocketError.ConnectionReset:
+                        onDisconnected( this, new ClientConnectionEventArgs( $"SendCommandAsync({command.Name}) :: Connection dumped by device. Attempting to reconnect in {reconnectDelay}s..." ) );
+                        break;
+                    case SocketError.Shutdown:
+                        onDisconnected( this, new ClientConnectionEventArgs( $"SendCommandAsync({command.Name}) :: Broken connection, attempting to reconnect in {reconnectDelay}s..." ) );
+                        break;
+                    case SocketError.OperationAborted:
+                        logger.LogWarning( $"SendCommandAsync({command.Name}) :: Operation timed out." );
+                        break;
+                    default:
+                        logger.LogError( $"SendCommandAsync({command.Name}) :: SocketException ({(int)ex.NativeErrorCode}) occurred!!!: {ex.Message}" );
+                        break;
+                }
 
             } catch( Exception ex ) {
-                if( ex is OperationCanceledException )
-                    /* Soft explanation */
-                    logger.LogWarning( $"SendCommandAsync({command.Name}) :: Command timed out." );
-                else
-                    /* As above, let someone know there was a real problem */
-                    logger.LogError( $"SendCommandAsync({command.Name}) :: Exception occurred: {ex.Message}" );
+                logger.LogError( $"SendCommandAsync({command.Name}) :: Exception occurred: {ex.Message}" );
             }
+
             return null;
         }
 

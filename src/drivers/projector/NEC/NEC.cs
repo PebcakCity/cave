@@ -306,7 +306,7 @@ namespace cave.drivers.projector.NEC {
                 client.ResponseReceived += handleDeviceResponse;
 
                 logger.LogDebug( ":: constructed" );
-                GetInfo( firstRun: true );
+                //GetInfo( firstRun: true );
             } catch( Exception ) {
                 throw;
             }
@@ -324,7 +324,7 @@ namespace cave.drivers.projector.NEC {
         }
 
         /// <summary>
-        /// Called when infoUpdateTimer elapses, retrieves lamp info.
+        /// Called when infoUpdateTimer elapses, retrieves just the updated lamp info.
         /// </summary>
         private void infoTimerElapsed( object source, ElapsedEventArgs args ) {
             logger.LogInformation("Calling GetInfo()");
@@ -340,6 +340,9 @@ namespace cave.drivers.projector.NEC {
             logger.LogInformation(args.Message);
             statusUpdateTimer.Enabled = true;
             infoUpdateTimer.Enabled = true;
+
+            /*Immediately call GetInfo() as it's on a long timer and probably won't be called for a while.*/
+            GetInfo(true);
         }
         
         /// <summary>
@@ -650,7 +653,9 @@ namespace cave.drivers.projector.NEC {
         /// This is intended to be run once or twice an hour to get updated lamp life data.
         /// If not running for the first time, model and serial number retrieval are skipped.
         /// </summary>
-        /// <param name="firstRun">Whether this is running as part of startup or not.</param>
+        /// <param name="firstRun">Whether this is the first GetInfo run after connection success.
+        /// Determines whether to fetch model & serial data (if firstRun==true) as well or just
+        /// the lamp data.</param>
         public void GetInfo( bool firstRun=false ) {
             Task.Run( async () => {
                 /* Increase this delay if the first SendCommandAsync tends to time out.

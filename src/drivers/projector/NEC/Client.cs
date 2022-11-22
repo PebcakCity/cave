@@ -35,7 +35,7 @@ namespace cave.drivers.projector.NEC {
 
         private NEC device;
         private MainWindow window;
-        private static readonly NLog.Logger logger = NLog.LogManager.GetLogger("NEC Client");
+        private readonly Logger logger = LogManager.GetLogger("NEC.Client");
 
 #endregion
 

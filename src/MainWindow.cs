@@ -23,7 +23,7 @@ namespace cave
         #pragma warning restore CS0414
 
         private NEC nec;
-        private static readonly NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+        private readonly Logger logger = LogManager.GetLogger("Window");
 
         public MainWindow() : this(new Builder("MainWindow.glade")) { }
 

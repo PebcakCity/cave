@@ -117,7 +117,7 @@ namespace cave.drivers.projector.NEC {
 #region Private fields
 
         private Client client = null;
-        private static readonly NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+        private readonly Logger logger = LogManager.GetLogger("NEC");
         private DeviceStatus deviceStatus = new();
         private DeviceInfo deviceInfo = new();
         private System.Timers.Timer statusUpdateTimer;

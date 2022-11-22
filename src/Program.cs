@@ -6,7 +6,7 @@ namespace cave
 {
     class Program
     {
-        private static readonly NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+        private static readonly Logger logger = LogManager.GetLogger("Program");
 
         [STAThread]
         public static void Main(string[] args)

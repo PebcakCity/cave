@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+using NLog;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -117,7 +117,7 @@ namespace cave.drivers.projector.NEC {
 #region Private fields
 
         private Client client = null;
-        private ILogger logger;
+        private static readonly NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
         private DeviceStatus deviceStatus = new();
         private DeviceInfo deviceInfo = new();
         private System.Timers.Timer statusUpdateTimer;
@@ -289,8 +289,6 @@ namespace cave.drivers.projector.NEC {
         /// </summary>
         public NEC( MainWindow window, string ip, int port=7142 ) {
             try {
-                this.logger = Program.LogFactory.CreateLogger( "NEC" );
-                
                 statusUpdateTimer = new System.Timers.Timer(2000);
                 statusUpdateTimer.Elapsed += statusTimerElapsed;
                 statusUpdateTimer.Enabled = false;
@@ -305,7 +303,7 @@ namespace cave.drivers.projector.NEC {
                 client.ClientDisconnected += disableUpdates;
                 client.ResponseReceived += handleDeviceResponse;
 
-                logger.LogDebug( ":: constructed" );
+                logger.Debug( ":: constructed" );
                 //GetInfo( firstRun: true );
             } catch( Exception ) {
                 throw;
@@ -327,7 +325,7 @@ namespace cave.drivers.projector.NEC {
         /// Called when infoUpdateTimer elapses, retrieves just the updated lamp info.
         /// </summary>
         private void infoTimerElapsed( object source, ElapsedEventArgs args ) {
-            logger.LogInformation("Calling GetInfo()");
+            logger.Info("Calling GetInfo()");
             GetInfo();
         }
 
@@ -337,7 +335,7 @@ namespace cave.drivers.projector.NEC {
         /// while the socket is connected to the NEC device.
         /// </summary>
         private void enableUpdates( object sender, ClientConnectionEventArgs args ) {
-            logger.LogInformation(args.Message);
+            logger.Info(args.Message);
             statusUpdateTimer.Enabled = true;
             infoUpdateTimer.Enabled = true;
 
@@ -351,7 +349,7 @@ namespace cave.drivers.projector.NEC {
         /// while the socket is disconnected.
         /// </summary>
         private void disableUpdates( object sender, ClientConnectionEventArgs args ) {
-            logger.LogWarning(args.Message);
+            logger.Warn(args.Message);
             statusUpdateTimer.Enabled = false;
             infoUpdateTimer.Enabled = false;
         }
@@ -365,7 +363,7 @@ namespace cave.drivers.projector.NEC {
         private void handleDeviceResponse( object sender, ResponseEventArgs rea ) {
             // Log the response
             Response response = rea.Response;
-            logger.LogDebug( "Response: {response}", response );
+            logger.Debug( "Response: {response}", response );
 
             if( response == null )
                 return;
@@ -397,7 +395,7 @@ namespace cave.drivers.projector.NEC {
                     if( errorMsg != null ) {
                         string logString = $"Operation '{command.Name}' failed with NEC error code {errorCode}" +
                             Environment.NewLine + $"{errorMsg}";
-                        logger.LogWarning( logString );
+                        logger.Warn( logString );
                     }
                 }
             }
@@ -414,7 +412,7 @@ namespace cave.drivers.projector.NEC {
             Command command = rea.Command;
 
             if( command != null ) {
-                logger.LogDebug( "Command '{name}' successful.", command.Name );
+                logger.Debug( "Command '{name}' successful.", command.Name );
 
                 if( command.Name.Equals("GetErrors") && response.Matches( Response.GetErrorsSuccess ) ) {
                     handleGetErrors( response );
@@ -441,9 +439,9 @@ namespace cave.drivers.projector.NEC {
                 string errorString = String.Join( Environment.NewLine, errors );
                 string logString = "Projector errors are reported: " +
                     Environment.NewLine + $"{errorString}";
-                logger.LogWarning( logString );
+                logger.Warn( logString );
             } else {
-                logger.LogInformation( "No projector errors reported at this time." );
+                logger.Info( "No projector errors reported at this time." );
             }
         }
 
@@ -487,13 +485,13 @@ namespace cave.drivers.projector.NEC {
                 deviceStatus.Muted.Video = (response.Bytes[11] == 0x01);
                 deviceStatus.Muted.Audio = (response.Bytes[12] == 0x01);
 
-                logger.LogDebug(
+                logger.Debug(
                     "handleGetStatus :: PowerStatus: {stat1}, InputSelected: {stat2}, Muted.Video: {stat3}, Muted.Audio: {stat4}",
                     deviceStatus.Power, deviceStatus.InputSelected,
                     deviceStatus.Muted.Video, deviceStatus.Muted.Audio
                 );
             } catch( Exception ex ) {
-                logger.LogError( "handleGetStatus :: Error occurred: {error}", ex.Message );
+                logger.Error( "handleGetStatus :: Error occurred: {error}", ex.Message );
             }
         }
 
@@ -574,7 +572,7 @@ namespace cave.drivers.projector.NEC {
         /// Powers on the device.
         /// </summary>
         public async Task PowerOnAsync() {
-            logger.LogInformation( "Sending command 'PowerOn'");
+            logger.Info( "Sending command 'PowerOn'");
             await client.SendCommandAsync( Command.PowerOn );
         }
 
@@ -591,7 +589,7 @@ namespace cave.drivers.projector.NEC {
         /// Powers off the device.
         /// </summary>
         public async Task PowerOffAsync() {
-            logger.LogInformation( "Sending command 'PowerOff'");
+            logger.Info( "Sending command 'PowerOff'");
             await client.SendCommandAsync( Command.PowerOff );
         }
 
@@ -615,7 +613,7 @@ namespace cave.drivers.projector.NEC {
         public async Task SelectInputAsync( object input ) {
             object necInput = input;
             if( Enum.TryParse( typeof(Input), input.ToString(), true, out necInput ) ) {
-                logger.LogInformation( "Sending command 'SelectInput({value})'", (Input)necInput );
+                logger.Info( "Sending command 'SelectInput({value})'", (Input)necInput );
                 await client.SendCommandAsync( Command.SelectInput, true, (Input)necInput );
             }
         }
@@ -641,7 +639,7 @@ namespace cave.drivers.projector.NEC {
         /// current power state, last selected input and whether video and/or audio are currently muted.
         /// </summary>
         public void GetStatus() {
-            logger.LogDebug( "GetStatus() :: Sending command 'GetStatus'" );
+            logger.Debug( "GetStatus() :: Sending command 'GetStatus'" );
             Task.Run( async () => {
                 await client.SendCommandAsync( Command.GetStatus );
             } );
@@ -663,36 +661,36 @@ namespace cave.drivers.projector.NEC {
                    (for LampInfo.GoodForSeconds) times out. */
                 await Task.Delay(1000);
 
-                logger.LogDebug( "Fetching lamp info..." );
+                logger.Debug( "Fetching lamp info..." );
 
-                logger.LogDebug( "...GoodForSeconds");
+                logger.Debug( "...GoodForSeconds");
                 await client.SendCommandAsync( Command.GetLampInfo, true, DeviceInfo.Lamp.LampNumber.Lamp1, DeviceInfo.Lamp.LampInfo.GoodForSeconds );
 
                 await Task.Delay(100);
 
-                logger.LogDebug( "...UsageTimeSeconds");
+                logger.Debug( "...UsageTimeSeconds");
                 await client.SendCommandAsync( Command.GetLampInfo, true, DeviceInfo.Lamp.LampNumber.Lamp1, DeviceInfo.Lamp.LampInfo.UsageTimeSeconds );
 
                 await Task.Delay(100);
 
-                logger.LogDebug( "...RemainingSeconds");
+                logger.Debug( "...RemainingSeconds");
                 await client.SendCommandAsync( Command.GetLampInfo, true, DeviceInfo.Lamp.LampNumber.Lamp1, DeviceInfo.Lamp.LampInfo.RemainingSeconds );
 
                 await Task.Delay(100);
 
-                logger.LogDebug( "...RemainingPercent");
+                logger.Debug( "...RemainingPercent");
                 await client.SendCommandAsync( Command.GetLampInfo, true, DeviceInfo.Lamp.LampNumber.Lamp1, DeviceInfo.Lamp.LampInfo.RemainingPercent );
 
                 /* These won't suddenly change, so no need to query them every time */
                 if( firstRun ) {
                     await Task.Delay(100);
 
-                    logger.LogDebug( "Fetching model #" );
+                    logger.Debug( "Fetching model #" );
                     await client.SendCommandAsync( Command.GetModel );
 
                     await Task.Delay(100);
 
-                    logger.LogDebug( "Fetching serial #" );
+                    logger.Debug( "Fetching serial #" );
                     await client.SendCommandAsync( Command.GetSerial );
                 }
             } );
@@ -703,7 +701,7 @@ namespace cave.drivers.projector.NEC {
         /// such as lamp in need of replacement, temperature error, etc.
         /// </summary>
         public void GetErrors() {
-            logger.LogInformation( "Sending command 'GetErrors'" );
+            logger.Info( "Sending command 'GetErrors'" );
             Task.Run( async () => {
                 await client.SendCommandAsync( Command.GetErrors );
             } );
@@ -772,10 +770,10 @@ namespace cave.drivers.projector.NEC {
 #region Test code
 
         public void test() {
-            logger.LogInformation("PowerStatus: {stat1}, InputStatus: {stat2}", PowerStatus, InputStatus);
-            logger.LogInformation("Video mute: {mute1}, Audio mute: {mute2}", deviceStatus.Muted.Video, deviceStatus.Muted.Audio);
-            logger.LogInformation("Model name: {model}, Serial#: {serial}", deviceInfo.Model, deviceInfo.SerialNumber );
-            logger.LogInformation("Lamp hours used: {stat1}, Lamp hours remaining: {stat2}, Lamp hour limit: {stat3}, Lamp life remaining (%): {stat4}",
+            logger.Info("PowerStatus: {stat1}, InputStatus: {stat2}", PowerStatus, InputStatus);
+            logger.Info("Video mute: {mute1}, Audio mute: {mute2}", deviceStatus.Muted.Video, deviceStatus.Muted.Audio);
+            logger.Info("Model name: {model}, Serial#: {serial}", deviceInfo.Model, deviceInfo.SerialNumber );
+            logger.Info("Lamp hours used: {stat1}, Lamp hours remaining: {stat2}, Lamp hour limit: {stat3}, Lamp life remaining (%): {stat4}",
                 deviceInfo.Lamp1.HoursUsed, deviceInfo.Lamp1.HoursRemaining, deviceInfo.Lamp1.HoursGoodFor, deviceInfo.Lamp1.PercentRemaining);
         }
 

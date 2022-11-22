@@ -1,7 +1,7 @@
 using System;
 using Gtk;
 using UI = Gtk.Builder.ObjectAttribute;
-using Microsoft.Extensions.Logging;
+using NLog;
 
 using cave.drivers.projector.NEC;
 
@@ -23,7 +23,7 @@ namespace cave
         #pragma warning restore CS0414
 
         private NEC nec;
-        private ILogger logger;
+        private static readonly NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
 
         public MainWindow() : this(new Builder("MainWindow.glade")) { }
 
@@ -33,18 +33,16 @@ namespace cave
 
             DeleteEvent += Window_DeleteEvent;
 
-            this.logger = Program.LogFactory.CreateLogger("MainWindow");
-
             ConnectToProjector();
         }
 
         public void ConnectToProjector() {
-            logger.LogDebug("ConnectToProjector() called");
+            logger.Debug("ConnectToProjector() called");
             try {
                 string ip = Environment.GetEnvironmentVariable("NECTESTIP");
                 nec = new NEC( this, ip );
             } catch( Exception ex ) {
-                logger.LogError("Failed to instantiate NEC controller: {error}", ex.Message);
+                logger.Error("Failed to instantiate NEC controller: {error}", ex.Message);
             }
         }
 

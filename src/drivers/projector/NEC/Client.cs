@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+using NLog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,7 +35,7 @@ namespace cave.drivers.projector.NEC {
 
         private NEC device;
         private MainWindow window;
-        private ILogger logger;
+        private static readonly NLog.Logger logger = NLog.LogManager.GetLogger("NEC Client");
 
 #endregion
 
@@ -81,13 +81,12 @@ namespace cave.drivers.projector.NEC {
                 this.ipAddress = IPAddress.Parse( ip );
                 this.device = device;
                 this.window = window;
-                this.logger = Program.LogFactory.CreateLogger( "NEC.Client" );
-                logger.LogDebug( ":: constructed" );
+                logger.Debug( ":: constructed" );
                 Task.Run( async () => {
                     await connectAsync();
                 });
             } catch (Exception ex) {
-                logger.LogError("Error occurred: {error}", ex.Message);
+                logger.Error("Error occurred: {error}", ex.Message);
             }
         }
 
@@ -136,7 +135,7 @@ namespace cave.drivers.projector.NEC {
 
                     await socket.ConnectAsync( ipAddress, Port, token );
                     connected = true;
-                    logger.LogInformation( "Connected to {addr}:{port}", Address, Port );
+                    logger.Info( "Connected to {addr}:{port}", Address, Port );
 
                     /* Notify subscriber (NEC) to begin communications */
                     if( ClientConnected != null )
@@ -146,13 +145,13 @@ namespace cave.drivers.projector.NEC {
                     socket.SendTimeout = 500;
                     socket.ReceiveTimeout = 1000;
                 } catch( OperationCanceledException ) {
-                    logger.LogWarning( "connectAsync() :: (Attempt #{attempt}) Timed out.", attempts );
+                    logger.Warn( "connectAsync() :: (Attempt #{attempt}) Timed out.", attempts );
                 } catch( Exception ex ) {
-                    logger.LogError( "connectAsync() :: (Attempt #{attempt}) {errorType} : {errorMsg}", attempts, ex.GetType(), ex.Message );
+                    logger.Error( "connectAsync() :: (Attempt #{attempt}) {errorType} : {errorMsg}", attempts, ex.GetType(), ex.Message );
                 }
             }
             if( !socket.Connected ) {
-                logger.LogError( "connectAsync(retriesAllowed={r}, timeout={t}) :: Fatal: Failed to connect to device.", retriesAllowed, timeout );
+                logger.Error( "connectAsync(retriesAllowed={r}, timeout={t}) :: Fatal: Failed to connect to device.", retriesAllowed, timeout );
                 /* After finally failing to connect, leave behind a fresh unopened socket.
                    Future attempts to send/receive on this socket (ie. user clicks button) will fail
                    with SocketError.Shutdown, causing another cycle of connection attempts. */
@@ -178,7 +177,7 @@ namespace cave.drivers.projector.NEC {
             }
             if( reconnect ) {
                 Task.Run( async () => {
-                    logger.LogWarning( $"Attempting to reconnect in {reconnectDelay}s..." );
+                    logger.Warn( $"Attempting to reconnect in {reconnectDelay}s..." );
                     await Task.Delay( reconnectDelay * 1000 );
                     await connectAsync();
                 } );
@@ -207,19 +206,19 @@ namespace cave.drivers.projector.NEC {
         /// <param name="args">Arguments to the command, either passed separately or as an array.</param>
         private byte[] prepareCommand( Command command, bool checksum, params object[] args ){
             int argsAppended = 0;
-            logger.LogDebug( "Preparing command '{command}'", command.Name );
+            logger.Debug( "Preparing command '{command}'", command.Name );
             var cmdBytes = command.Bytes.ToList();
             foreach( object arg in args ) {
                 if( arg is NEC.Input || arg is NEC.DeviceInfo.Lamp.LampNumber || arg is NEC.DeviceInfo.Lamp.LampInfo ) {
                     ++argsAppended;
                     cmdBytes.Add( Convert.ToByte(arg) );
                 } else {
-                    logger.LogError("prepareCommand() :: Argument type unsupported: {arg}", arg.GetType().ToString());
+                    logger.Error("prepareCommand() :: Argument type unsupported: {arg}", arg.GetType().ToString());
                 }
             }
             if( checksum || argsAppended > 0 )
                 cmdBytes.Add( this.checksum(cmdBytes) );
-            logger.LogDebug("Sending bytes: {cmd}", Response.FromBytes(cmdBytes));
+            logger.Debug("Sending bytes: {cmd}", Response.FromBytes(cmdBytes));
             return cmdBytes.ToArray();
         }
 
@@ -248,7 +247,7 @@ namespace cave.drivers.projector.NEC {
 
                 int bytesRead = await socket.ReceiveAsync( readBuffer, SocketFlags.None, token );
                 if( bytesRead <= 0 ) {
-                    logger.LogError( $"SendCommandAsync({command.Name}) :: Failed to get a response, check device connection." );
+                    logger.Error( $"SendCommandAsync({command.Name}) :: Failed to get a response, check device connection." );
                     /* Should contain whatever actual socket error last occurred if one actually did occur */
                     throw new SocketException();
                 } else {
@@ -292,7 +291,7 @@ namespace cave.drivers.projector.NEC {
                         onDisconnected( this, new ClientConnectionEventArgs( $"SendCommandAsync({command.Name}) :: Operation timed out." ), false );
                         break;
                     default:
-                        logger.LogError( $"SendCommandAsync({command.Name}) :: SocketException ({(int)ex.NativeErrorCode}) occurred!!!: {ex.Message}" );
+                        logger.Error( $"SendCommandAsync({command.Name}) :: SocketException ({(int)ex.NativeErrorCode}) occurred!!!: {ex.Message}" );
                         break;
                 }
 
@@ -303,7 +302,7 @@ namespace cave.drivers.projector.NEC {
                         onDisconnected( this, new ClientConnectionEventArgs( $"SendCommandAsync({command.Name}) :: Operation timed out." ), false);
                         break;
                     default:
-                        logger.LogError( $"SendCommandAsync({command.Name}) :: Exception occurred: {ex.Message}" );
+                        logger.Error( $"SendCommandAsync({command.Name}) :: Exception occurred: {ex.Message}" );
                         break;
                 }
             }

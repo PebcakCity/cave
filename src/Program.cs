@@ -13,6 +13,8 @@ namespace cave
         {
             Application.Init();
 
+            logger.Info("Starting...");
+
             var app = new Application("org.uca.avs.cave", GLib.ApplicationFlags.None);
             app.Register(GLib.Cancellable.Current);
 

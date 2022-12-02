@@ -35,7 +35,7 @@ namespace cave.drivers.projector.NEC {
         /*  Checksum */    
             any } );
 
-        public static Response LampInfoSuccess => new( new byte[]{ 0x23, 0x96, any, any, 0x06,
+        public static Response GetLampInfoSuccess => new( new byte[]{ 0x23, 0x96, any, any, 0x06,
         /*  Lamp#       What was requested      32-bit int data         Checksum */
             any,        any,                    any, any, any, any,     any } );
 
@@ -51,14 +51,14 @@ namespace cave.drivers.projector.NEC {
         /*  Checksum */
             any } );
 
-        public static Response ModelInfoSuccess => new( new byte[] { 0x20, 0x85, any, any, 0x20, 
+        public static Response GetModelInfoSuccess => new( new byte[] { 0x20, 0x85, any, any, 0x20, 
         /*  32 bytes of data */
             any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any,
             any, any, any, any, any, any, any, any, any, any, any, any,
         /*  Checksum */
             any } );
 
-        public static Response SerialInfoSuccess => new( new byte[] { 0x20, 0xbf, any, any, 0x12, 0x01, 0x06,
+        public static Response GetSerialInfoSuccess => new( new byte[] { 0x20, 0xbf, any, any, 0x12, 0x01, 0x06,
         /*  16 bytes of data */
             any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any,
         /*  Checksum */
@@ -69,7 +69,7 @@ namespace cave.drivers.projector.NEC {
         public static Response PowerOnFailure => new( new byte[]{ 0xa2, 0x00, any, any, 0x02, any, any, any } );
         public static Response PowerOffFailure => new( new byte[]{ 0xa2, 0x01, any, any, 0x02, any, any, any } );
         public static Response SelectInputFailure => new( new byte[]{ 0xa2, 0x03, any, any, 0x02, any, any, any } );
-        public static Response LampInfoFailure => new( new byte[] { 0xa3, 0x96, any, any, 0x02, any, any, any } );
+        public static Response GetLampInfoFailure => new( new byte[] { 0xa3, 0x96, any, any, 0x02, any, any, any } );
         public static Response GetErrorsFailure => new( new byte[]{ 0xa0, 0x88, any, any, 0x02, any, any, any } );
 
         public Response( byte[] bytes ) : base(bytes) { Bytes = bytes; }

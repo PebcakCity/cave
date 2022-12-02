@@ -393,7 +393,7 @@ namespace cave.drivers.projector.NEC {
                     var errorCode = (response.Bytes[5], response.Bytes[6]);
                     var errorMsg = CommandError.GetValueOrDefault(errorCode);
                     if( errorMsg != null ) {
-                        string logString = $"Operation '{command.Name}' failed with NEC error code {errorCode}" +
+                        string logString = $"Operation '{command}' failed with NEC error code {errorCode}" +
                             Environment.NewLine + $"{errorMsg}";
                         logger.Warn( logString );
                     }
@@ -412,18 +412,26 @@ namespace cave.drivers.projector.NEC {
             Command command = rea.Command;
 
             if( command != null ) {
-                logger.Debug( "Command '{name}' successful.", command.Name );
+                logger.Debug( "Command '{name}' successful.", command );
 
-                if( command.Name.Equals("GetErrors") && response.Matches( Response.GetErrorsSuccess ) ) {
-                    handleGetErrors( response );
-                } else if( command.Name.Equals("GetStatus") && response.Matches( Response.GetStatusSuccess ) ) {
-                    handleGetStatus( response );
-                } else if( command.Name.Equals("GetLampInfo") && response.Matches( Response.LampInfoSuccess ) ) {
-                    handleGetLampInfo( response );
-                } else if( command.Name.Equals("GetModel") && response.Matches( Response.ModelInfoSuccess ) ) {
-                    handleGetModelInfo( response );
-                } else if( command.Name.Equals("GetSerial") && response.Matches( Response.SerialInfoSuccess ) ) {
-                    handleGetSerialInfo( response );
+                switch( command.Type ) {
+                    case Command.CommandType.GetErrors when response.Matches( Response.GetErrorsSuccess ):
+                        handleGetErrors( response );
+                        break;
+                    case Command.CommandType.GetStatus when response.Matches( Response.GetStatusSuccess ):
+                        handleGetStatus( response );
+                        break;
+                    case Command.CommandType.GetLampInfo when response.Matches( Response.GetLampInfoSuccess ):
+                        handleGetLampInfo( response );
+                        break;
+                    case Command.CommandType.GetModel when response.Matches( Response.GetModelInfoSuccess ):
+                        handleGetModelInfo( response );
+                        break;
+                    case Command.CommandType.GetSerial when response.Matches( Response.GetSerialInfoSuccess ):
+                        handleGetSerialInfo( response );
+                        break;
+                    default:
+                        break;
                 }
             }
         }

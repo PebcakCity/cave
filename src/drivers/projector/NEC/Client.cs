@@ -206,7 +206,7 @@ namespace cave.drivers.projector.NEC {
         /// <param name="args">Arguments to the command, either passed separately or as an array.</param>
         private byte[] prepareCommand( Command command, bool checksum, params object[] args ){
             int argsAppended = 0;
-            logger.Debug( "Preparing command '{command}'", command.Name );
+            logger.Debug( "Preparing command '{command}'", command );
             var cmdBytes = command.Bytes.ToList();
             foreach( object arg in args ) {
                 if( arg is NEC.Input || arg is NEC.DeviceInfo.Lamp.LampNumber || arg is NEC.DeviceInfo.Lamp.LampInfo ) {
@@ -247,7 +247,7 @@ namespace cave.drivers.projector.NEC {
 
                 int bytesRead = await socket.ReceiveAsync( readBuffer, SocketFlags.None, token );
                 if( bytesRead <= 0 ) {
-                    logger.Error( $"SendCommandAsync({command.Name}) :: Failed to get a response, check device connection." );
+                    logger.Error( $"SendCommandAsync({command}) :: Failed to get a response, check device connection." );
                     /* Should contain whatever actual socket error last occurred if one actually did occur */
                     throw new SocketException();
                 } else {
@@ -281,17 +281,17 @@ namespace cave.drivers.projector.NEC {
                    .NET maps ECONNRESET to SocketError.ConnectionReset and EPIPE to SocketError.Shutdown */
                 switch( ex.SocketErrorCode ) {
                     case SocketError.ConnectionReset:
-                        onDisconnected( this, new ClientConnectionEventArgs( $"SendCommandAsync({command.Name}) :: Connection dumped by device." ), true );
+                        onDisconnected( this, new ClientConnectionEventArgs( $"SendCommandAsync({command}) :: Connection dumped by device." ), true );
                         break;
                     case SocketError.Shutdown:
-                        onDisconnected( this, new ClientConnectionEventArgs( $"SendCommandAsync({command.Name}) :: Broken connection." ), true );
+                        onDisconnected( this, new ClientConnectionEventArgs( $"SendCommandAsync({command}) :: Broken connection." ), true );
                         break;
                     case SocketError.OperationAborted:
                         lastCommandTimedOut = true;
-                        onDisconnected( this, new ClientConnectionEventArgs( $"SendCommandAsync({command.Name}) :: Operation timed out." ), false );
+                        onDisconnected( this, new ClientConnectionEventArgs( $"SendCommandAsync({command}) :: Operation timed out." ), false );
                         break;
                     default:
-                        logger.Error( $"SendCommandAsync({command.Name}) :: SocketException ({(int)ex.NativeErrorCode}) occurred!!!: {ex.Message}" );
+                        logger.Error( $"SendCommandAsync({command}) :: SocketException ({(int)ex.NativeErrorCode}) occurred!!!: {ex.Message}" );
                         break;
                 }
 
@@ -299,10 +299,10 @@ namespace cave.drivers.projector.NEC {
                 switch( ex ) {
                     case OperationCanceledException _:
                         lastCommandTimedOut = true;
-                        onDisconnected( this, new ClientConnectionEventArgs( $"SendCommandAsync({command.Name}) :: Operation timed out." ), false);
+                        onDisconnected( this, new ClientConnectionEventArgs( $"SendCommandAsync({command}) :: Operation timed out." ), false);
                         break;
                     default:
-                        logger.Error( $"SendCommandAsync({command.Name}) :: Exception occurred: {ex.Message}" );
+                        logger.Error( $"SendCommandAsync({command}) :: Exception occurred: {ex.Message}" );
                         break;
                 }
             }

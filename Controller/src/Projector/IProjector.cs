@@ -1,4 +1,4 @@
-namespace cave.drivers.projector {
+namespace cave.Controller.Projector {
 
     /// <summary>
     /// Basic functionality we expect from all projectors.

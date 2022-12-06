@@ -3,7 +3,7 @@ using Gtk;
 using UI = Gtk.Builder.ObjectAttribute;
 using NLog;
 
-using cave.drivers.projector.NEC;
+using cave.Controller.Projector.NEC;
 
 namespace cave
 {
@@ -40,7 +40,7 @@ namespace cave
             logger.Debug("ConnectToProjector() called");
             try {
                 string ip = Environment.GetEnvironmentVariable("NECTESTIP");
-                nec = new NEC( this, ip );
+                nec = new NEC( ip );
             } catch( Exception ex ) {
                 logger.Error("Failed to instantiate NEC controller: {error}", ex.Message);
             }

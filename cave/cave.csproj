@@ -13,9 +13,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="NLog.config">
+    <None Include="..\NLog.config">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Controller\Projector.csproj" />
   </ItemGroup>
 
   <ItemGroup>

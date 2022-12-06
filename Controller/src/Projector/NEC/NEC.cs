@@ -22,7 +22,7 @@ using System.Timers;
     Ideally GetStatus should be called every couple seconds & GetInfo at least every hour or so to get updated lamp usage.
 */
 
-namespace cave.drivers.projector.NEC {
+namespace cave.Controller.Projector.NEC {
 
     /// <summary>
     /// Controller class for NEC projectors
@@ -287,7 +287,7 @@ namespace cave.drivers.projector.NEC {
         /// state upon connection success.  Any failure at any point results in
         /// an exception being thrown back to the caller.
         /// </summary>
-        public NEC( MainWindow window, string ip, int port=7142 ) {
+        public NEC( string ip, int port=7142 ) {
             try {
                 statusUpdateTimer = new System.Timers.Timer(2000);
                 statusUpdateTimer.Elapsed += statusTimerElapsed;
@@ -297,7 +297,7 @@ namespace cave.drivers.projector.NEC {
                 infoUpdateTimer.Elapsed += infoTimerElapsed;
                 infoUpdateTimer.Enabled = false;
 
-                this.client = new Client( this, window, ip, port );
+                this.client = new Client( this, ip, port );
 
                 client.ClientConnected += enableUpdates;
                 client.ClientDisconnected += disableUpdates;

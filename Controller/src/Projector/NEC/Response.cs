@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-using cave.utils;
+using cave.Utils;
 
 
-namespace cave.drivers.projector.NEC {
+namespace cave.Controller.Projector.NEC {
 
     public class ResponseEventArgs: EventArgs {
         public Response Response { get; set; }

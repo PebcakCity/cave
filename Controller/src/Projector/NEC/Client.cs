@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 
-namespace cave.drivers.projector.NEC {
+namespace cave.Controller.Projector.NEC {
 
     /// <summary>
     /// Argument passed when a connection is made or broken, contains a message to display/log.
@@ -34,7 +34,6 @@ namespace cave.drivers.projector.NEC {
         private bool lastCommandTimedOut;
 
         private NEC device;
-        private MainWindow window;
         private readonly Logger logger = LogManager.GetLogger("NEC.Client");
 
 #endregion
@@ -74,13 +73,12 @@ namespace cave.drivers.projector.NEC {
         /// <param name="window">A reference to the MainWindow class for sending event notifications.</param>
         /// <param name="ip">IP address of the device.</param>
         /// <param name="port">Port to connect to.</param>
-        public Client( NEC device, MainWindow window, string ip, int port=7142 ) {
+        public Client( NEC device, string ip, int port=7142 ) {
             try{
                 this.Address = ip;
                 this.Port = port;
                 this.ipAddress = IPAddress.Parse( ip );
                 this.device = device;
-                this.window = window;
                 logger.Debug( ":: constructed" );
                 Task.Run( async () => {
                     await connectAsync();

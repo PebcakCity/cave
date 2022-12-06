@@ -1,7 +1,7 @@
-using cave.utils;
+using cave.Utils;
 
 
-namespace cave.drivers.projector.NEC {
+namespace cave.Controller.Projector.NEC {
 
     public class Command: ByteSequence {
         public enum CommandType {

@@ -3,7 +3,25 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
+    <!-- To be overridden at publish time ( ie. to publish for Raspberry Pi, `dotnet publish -r linux-arm -c Release` ) -->
+    <!--<RuntimeIdentifier>linux-x64</RuntimeIdentifier>-->
+    <PublishTrimmed>true</PublishTrimmed>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <PublishSingleFile>true</PublishSingleFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <FilesToCopy Include="$(TargetDir)publish\*"/>
+  </ItemGroup>
+
+  <Target Name="CopyPublishedOutputsToBuildDir" AfterTargets="Publish">
+    <Message Text="Published to location: $(TargetDir)publish" Importance="High"/>
+    <Message Text="Copying output artifacts to build\" Importance="High"/>
+    <Copy
+      SourceFiles="@(FilesToCopy)"
+      DestinationFolder="$(TargetDir)..\..\..\..\..\build" />
+    <Message Text="Done." Importance="High"/>
+  </Target>
 
   <ItemGroup>
     <None Remove="**\*.glade" />

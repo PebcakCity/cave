@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Timers;
 
-
+using cave.Utils;
 /*
     Overall design:
     - Methods labeled with no suffix call and await async ones (PowerOn runs a Task that awaits PowerOnAsync, etc).
@@ -122,6 +122,7 @@ namespace cave.Controller.Projector.NEC {
         private DeviceInfo deviceInfo = new();
         private System.Timers.Timer statusUpdateTimer;
         private System.Timers.Timer infoUpdateTimer;
+        private IDisplayMessages mainWindow;
 
 #endregion
 
@@ -287,8 +288,10 @@ namespace cave.Controller.Projector.NEC {
         /// state upon connection success.  Any failure at any point results in
         /// an exception being thrown back to the caller.
         /// </summary>
-        public NEC( string ip, int port=7142 ) {
+        public NEC( IDisplayMessages window, string ip, int port=7142 ) {
             try {
+                mainWindow = window;
+
                 statusUpdateTimer = new System.Timers.Timer(2000);
                 statusUpdateTimer.Elapsed += statusTimerElapsed;
                 statusUpdateTimer.Enabled = false;
@@ -448,8 +451,10 @@ namespace cave.Controller.Projector.NEC {
                 string logString = "Projector errors are reported: " +
                     Environment.NewLine + $"{errorString}";
                 logger.Warn( logString );
+                mainWindow.DisplayMessage( logString );
             } else {
                 logger.Info( "No projector errors reported at this time." );
+                mainWindow.DisplayMessage( "No projector errors reported at this time." );
             }
         }
 
@@ -783,6 +788,13 @@ namespace cave.Controller.Projector.NEC {
             logger.Info("Model name: {model}, Serial#: {serial}", deviceInfo.Model, deviceInfo.SerialNumber );
             logger.Info("Lamp hours used: {stat1}, Lamp hours remaining: {stat2}, Lamp hour limit: {stat3}, Lamp life remaining (%): {stat4}",
                 deviceInfo.Lamp1.HoursUsed, deviceInfo.Lamp1.HoursRemaining, deviceInfo.Lamp1.HoursGoodFor, deviceInfo.Lamp1.PercentRemaining);
+            mainWindow.DisplayMessage(
+                "Power status: " + PowerStatus + "\n" +
+                "Input status: " + InputStatus + "\n" +
+                "Video mute: " + deviceStatus.Muted.Video + " / Audio mute: " + deviceStatus.Muted.Audio + "\n" +
+                "Model: " + deviceInfo.Model + " / Serial: " + deviceInfo.SerialNumber + "\n" +
+                "Lamp hours used: " + deviceInfo.Lamp1.HoursUsed + " / Life remaining: " + deviceInfo.Lamp1.PercentRemaining + "%"
+            );
         }
 
         public void test2() {

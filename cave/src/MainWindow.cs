@@ -4,10 +4,11 @@ using UI = Gtk.Builder.ObjectAttribute;
 using NLog;
 
 using cave.Controller.Projector.NEC;
+using cave.Utils;
 
 namespace cave
 {
-    public class MainWindow : Window
+    public class MainWindow : Window, IDisplayMessages
     {
         #pragma warning disable CS0414
         [UI] private Button _btn1 = null;
@@ -20,6 +21,7 @@ namespace cave
         [UI] private Button _btn8 = null;
         [UI] private Button _btnOn = null;
         [UI] private Button _btnOff = null;
+        [UI] private TextView _textView = null;
         #pragma warning restore CS0414
 
         private NEC nec;
@@ -40,7 +42,7 @@ namespace cave
             logger.Debug("ConnectToProjector() called");
             try {
                 string ip = Environment.GetEnvironmentVariable("NECTESTIP");
-                nec = new NEC( ip );
+                nec = new NEC( this, ip );
             } catch( Exception ex ) {
                 logger.Error("Failed to instantiate NEC controller: {error}", ex.Message);
             }
@@ -61,5 +63,9 @@ namespace cave
         private void Btn8Clicked(object sender, EventArgs a) { nec.GetErrors(); }
         private void BtnOnClicked(object sender, EventArgs a) { nec.PowerOn(); }
         private void BtnOffClicked(object sender, EventArgs a) { nec.PowerOff(); }
+
+        public void DisplayMessage(string message) {
+            _textView.Buffer.Text = message;
+        }
     }
 }

@@ -1,0 +1,160 @@
+﻿@using NLog
+@using Cave.DeviceControllers
+@using Cave.DeviceControllers.Projectors.NEC
+
+@inject IToastService ToastService
+@implements IObserver<DeviceStatus>
+
+<h1>Device Controller - @DeviceName</h1>
+
+@if ( DeviceReady )
+{
+    <h2>Device ready</h2>
+    if ( Device is IDisplay display )
+    {
+        <button class="btn btn-success" @onclick="@DisplayPowerOn">Power On</button>
+        <button class="btn btn-danger" @onclick="@DisplayPowerOff">Power Off</button>
+        <button class="btn btn-primary" @onclick="@(() => DisplaySelectInput("RGB1"))">RGB1</button>
+        <button class="btn btn-primary" @onclick="@(() => DisplaySelectInput("HDMI1"))">HDMI1</button>
+        if ( display is IDisplayMutable idm )
+        {
+            <button class="btn btn-primary">Display mute on/off</button>
+        }
+    }
+}
+else
+{
+    <button class="btn btn-danger" @onclick="TryInitializeDevice">Initialize</button>
+}
+
+@code {
+    #nullable disable
+
+    [Parameter]
+    public string IpAddress { get; set; }
+
+    [Parameter]
+    public int Port { get; set; }
+
+    [Parameter]
+    public string DeviceName { get; set; }
+
+    [Parameter]
+    public string DeviceClass { get; set; }
+
+    private IDevice Device = null;
+    private bool DeviceReady = false;
+    private IDisposable unsubscriber;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            switch ( DeviceClass )
+            {
+                case nameof( NECProjector ):
+                    if ( IpAddress is not null )
+                    {
+                        Device = new NECProjector( IpAddress, Port );
+                        await TryInitializeDevice();
+                    }
+                    break;
+            }
+            this.unsubscriber = Device.Subscribe( this );
+        }
+        catch { }
+    }
+
+    private async Task TryInitializeDevice()
+    {
+        try
+        {
+            await Device.Initialize();
+            DeviceReady = true;
+        }
+        catch ( Exception ex )
+        {
+            ToastService.ShowError( $"Device failed to initialize: {ex.Message}" );
+        }
+    }
+
+    private async Task DisplayPowerOn()
+    {
+        IDisplay id = Device as IDisplay;
+        await id.PowerOn();
+    }
+
+    private async Task DisplayPowerOff()
+    {
+        IDisplay id = Device as IDisplay;
+        await id.PowerOff();
+    }
+
+    private async Task DisplaySelectInput( string input )
+    {
+        try
+        {
+            IDisplay id = Device as IDisplay;
+            await id.PowerOnSelectInput( input );
+            //await id.SelectInput(input);
+        }
+        catch ( Exception ex )
+        {
+            OnError( ex );
+        }
+    }
+
+    private async Task DisplayMute( bool muted )
+    {
+        try
+        {
+            IDisplayMutable idm = Device as IDisplayMutable;
+            await idm.DisplayMute( muted );
+        }
+        catch ( Exception ex )
+        {
+            OnError( ex );
+        }
+    }
+
+    public void Subscribe( IObservable<DeviceStatus> observable )
+    {
+        if ( observable != null )
+            unsubscriber = observable.Subscribe( this );
+    }
+
+    public void Unsubscribe()
+    {
+        unsubscriber.Dispose();
+    }
+
+    public void OnNext( DeviceStatus status )
+    {
+
+    }
+
+    public void OnError( Exception exception )
+    {
+        if ( exception is AggregateException ae )
+        {
+            foreach ( Exception e in ae.InnerExceptions )
+            {
+                ToastService.ShowError( e.Message );
+            }
+        }
+        else if ( exception is CommandError ce )
+        {
+            ToastService.ShowError( ce );
+        }
+        else
+        {
+            ToastService.ShowError( exception.Message );
+        }
+    }
+
+    public void OnCompleted()
+    {
+        this.Unsubscribe();
+    }
+
+}

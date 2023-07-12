@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.6.33815.320
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cave", "Cave\Cave.csproj", "{258AF8AD-E50A-4B24-9C02-2C6215EECC55}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CaveBlazor", "CaveBlazor\CaveBlazor.csproj", "{01FE572A-57A5-45BF-B77B-F6EF90A3EED2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CaveGtk", "CaveGtk\CaveGtk.csproj", "{59C5B8E2-4AD3-4377-9170-7A572D69DC01}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{258AF8AD-E50A-4B24-9C02-2C6215EECC55}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{258AF8AD-E50A-4B24-9C02-2C6215EECC55}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{258AF8AD-E50A-4B24-9C02-2C6215EECC55}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{258AF8AD-E50A-4B24-9C02-2C6215EECC55}.Release|Any CPU.Build.0 = Release|Any CPU
+		{01FE572A-57A5-45BF-B77B-F6EF90A3EED2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{01FE572A-57A5-45BF-B77B-F6EF90A3EED2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{01FE572A-57A5-45BF-B77B-F6EF90A3EED2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{01FE572A-57A5-45BF-B77B-F6EF90A3EED2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{59C5B8E2-4AD3-4377-9170-7A572D69DC01}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{59C5B8E2-4AD3-4377-9170-7A572D69DC01}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{59C5B8E2-4AD3-4377-9170-7A572D69DC01}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{59C5B8E2-4AD3-4377-9170-7A572D69DC01}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7816E993-CF68-4A8D-B833-0440F16798FE}
+	EndGlobalSection
+EndGlobal

@@ -39,7 +39,7 @@ else
 @code {
     #nullable disable
 
-#region Public fields / parameters
+    #region Public fields / parameters
 
     [Parameter]
     public string IpAddress { get; set; }
@@ -53,9 +53,9 @@ else
     [Parameter]
     public string DeviceClass { get; set; }
 
-#endregion
+    #endregion
 
-#region Private fields
+    #region Private fields
 
     private IDevice Device = null;
     private bool DeviceReady = false;
@@ -72,9 +72,9 @@ else
     private int? LampHoursUsed;
     private string LampHoursText;
 
-#endregion
+    #endregion
 
-#region Private/protected methods
+    #region Private/protected methods
 
     protected override async Task OnInitializedAsync()
     {
@@ -160,9 +160,9 @@ else
         }
     }
 
-#endregion
+    #endregion
 
-#region Public methods
+    #region Public methods
 
     public void Subscribe( IObservable<DeviceStatus> observable )
     {
@@ -185,7 +185,7 @@ else
         this.ModelNumber = status.ModelNumber;
         this.SerialNumber = status.SerialNumber;
 
-        if (status.LampHoursTotal != null)
+        if ( status.LampHoursTotal != null )
             this.LampHoursTotal = status.LampHoursTotal;
 
         if ( status.LampHoursUsed != null )
@@ -200,6 +200,33 @@ else
         this.LastInputSelected = status.InputSelected?.ToString();
         this.VideoMuted = status.VideoMuted;
         this.AudioMuted = status.AudioMuted;
+
+        if ( status.Message != null )
+            DisplayMessage(status.Message, status.MessageType);
+    }
+
+    /// <summary>
+    /// Helper for OnNext()
+    /// </summary>
+    /// <param name="message">Message to toast</param>
+    /// <param name="type">Severity level of message</param>
+    private void DisplayMessage( string message, MessageType type )
+    {
+        switch ( type )
+        {
+            case MessageType.Info:
+                ToastService.ShowInfo(message);
+                break;
+            case MessageType.Success:
+                ToastService.ShowSuccess(message);
+                break;
+            case MessageType.Warning:
+                ToastService.ShowWarning(message);
+                break;
+            case MessageType.Error:
+                ToastService.ShowError(message);
+                break;
+        }
     }
 
     /// <summary>

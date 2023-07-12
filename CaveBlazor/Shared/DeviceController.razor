@@ -1,15 +1,19 @@
 ﻿@using NLog
 @using Cave.DeviceControllers
+@using Cave.DeviceControllers.Projectors
 @using Cave.DeviceControllers.Projectors.NEC
 
 @inject IToastService ToastService
 @implements IObserver<DeviceStatus>
 
 <h1>Device Controller - @DeviceName</h1>
-
 @if ( DeviceReady )
 {
-    <h2>Device ready</h2>
+    <p>Model: @ModelNumber</p>
+    <p>Serial number: @SerialNumber</p>
+
+    <p>Device ready</p>
+
     if ( Device is IDisplay display )
     {
         <button class="btn btn-success" @onclick="@DisplayPowerOn">Power On</button>
@@ -19,6 +23,11 @@
         if ( display is IDisplayMutable idm )
         {
             <button class="btn btn-primary">Display mute on/off</button>
+
+            if( idm is Projector pj )
+            {
+                <p>Lamp usage: @LampHoursText</p>
+            }
         }
     }
 }
@@ -29,6 +38,8 @@ else
 
 @code {
     #nullable disable
+
+#region Public fields / parameters
 
     [Parameter]
     public string IpAddress { get; set; }
@@ -42,9 +53,28 @@ else
     [Parameter]
     public string DeviceClass { get; set; }
 
+#endregion
+
+#region Private fields
+
     private IDevice Device = null;
     private bool DeviceReady = false;
     private IDisposable unsubscriber;
+
+    private string ModelNumber;
+    private string SerialNumber;
+
+    private string LastInputSelected;
+    private bool? VideoMuted;
+    private bool? AudioMuted;
+
+    private int? LampHoursTotal;
+    private int? LampHoursUsed;
+    private string LampHoursText;
+
+#endregion
+
+#region Private/protected methods
 
     protected override async Task OnInitializedAsync()
     {
@@ -56,11 +86,11 @@ else
                     if ( IpAddress is not null )
                     {
                         Device = new NECProjector( IpAddress, Port );
+                        this.unsubscriber = Device.Subscribe(this);
                         await TryInitializeDevice();
                     }
                     break;
             }
-            this.unsubscriber = Device.Subscribe( this );
         }
         catch { }
     }
@@ -80,14 +110,28 @@ else
 
     private async Task DisplayPowerOn()
     {
-        IDisplay id = Device as IDisplay;
-        await id.PowerOn();
+        try
+        {
+            IDisplay id = Device as IDisplay;
+            await id.PowerOn();
+        }
+        catch ( Exception ex )
+        {
+            OnError(ex);
+        }
     }
 
     private async Task DisplayPowerOff()
     {
-        IDisplay id = Device as IDisplay;
-        await id.PowerOff();
+        try
+        {
+            IDisplay id = Device as IDisplay;
+            await id.PowerOff();
+        }
+        catch ( Exception ex )
+        {
+            OnError(ex);
+        }
     }
 
     private async Task DisplaySelectInput( string input )
@@ -96,11 +140,10 @@ else
         {
             IDisplay id = Device as IDisplay;
             await id.PowerOnSelectInput( input );
-            //await id.SelectInput(input);
         }
         catch ( Exception ex )
         {
-            OnError( ex );
+            OnError(ex);
         }
     }
 
@@ -113,9 +156,13 @@ else
         }
         catch ( Exception ex )
         {
-            OnError( ex );
+            OnError(ex);
         }
     }
+
+#endregion
+
+#region Public methods
 
     public void Subscribe( IObservable<DeviceStatus> observable )
     {
@@ -128,11 +175,37 @@ else
         unsubscriber.Dispose();
     }
 
+    /// <summary>
+    /// Take a DeviceStatus instance representing what was updated and update
+    /// our local data, then display the included message if present.
+    /// </summary>
+    /// <param name="status">DeviceStatus instance representing everything that changed</param>
     public void OnNext( DeviceStatus status )
     {
+        this.ModelNumber = status.ModelNumber;
+        this.SerialNumber = status.SerialNumber;
 
+        if (status.LampHoursTotal != null)
+            this.LampHoursTotal = status.LampHoursTotal;
+
+        if ( status.LampHoursUsed != null )
+            this.LampHoursUsed = status.LampHoursUsed;
+
+        // bug here in % calculation?
+        this.LampHoursText = ( LampHoursTotal > -1 && LampHoursUsed > -1 ) ?
+            $"{LampHoursUsed} / {LampHoursTotal} hrs "
+                + $"({(int)Math.Floor((double)LampHoursUsed/(double)LampHoursTotal)}%)" 
+                : "n/a";
+
+        this.LastInputSelected = status.InputSelected?.ToString();
+        this.VideoMuted = status.VideoMuted;
+        this.AudioMuted = status.AudioMuted;
     }
 
+    /// <summary>
+    /// Display an error message
+    /// </summary>
+    /// <param name="exception">The exception or AggregateException causing this error</param>
     public void OnError( Exception exception )
     {
         if ( exception is AggregateException ae )
@@ -142,9 +215,9 @@ else
                 ToastService.ShowError( e.Message );
             }
         }
-        else if ( exception is CommandError ce )
+        else if ( exception is NECCommandError nce )
         {
-            ToastService.ShowError( ce );
+            ToastService.ShowError( nce );
         }
         else
         {
@@ -152,9 +225,13 @@ else
         }
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
     public void OnCompleted()
     {
         this.Unsubscribe();
     }
 
+#endregion
 }

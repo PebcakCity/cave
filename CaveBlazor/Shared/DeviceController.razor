@@ -194,7 +194,7 @@ else
         // bug here in % calculation?
         this.LampHoursText = ( LampHoursTotal > -1 && LampHoursUsed > -1 ) ?
             $"{LampHoursUsed} / {LampHoursTotal} hrs "
-                + $"({(int)Math.Floor((double)LampHoursUsed/(double)LampHoursTotal)}%)" 
+                + $"({(int)Math.Floor((double)LampHoursUsed/(double)LampHoursTotal*100.0)}%)" 
                 : "n/a";
 
         this.LastInputSelected = status.InputSelected?.ToString();

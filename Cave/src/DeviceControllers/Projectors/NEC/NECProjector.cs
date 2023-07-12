@@ -1,13 +1,13 @@
-using NLog;
 using System.Text;
-using System.Threading.Tasks;
+
+using NLog;
 
 using Cave.Utils;
-
+using Cave.src.DeviceControllers.Projectors.NEC;
 
 namespace Cave.DeviceControllers.Projectors.NEC
 {
-    public class NECProjector: Projector
+    public partial class NECProjector: Projector
     {
 #region Private fields
         private Client? Client = null;
@@ -18,6 +18,10 @@ namespace Cave.DeviceControllers.Projectors.NEC
         private Input? InputSelected;
         private bool? AudioMuted;
         private bool? VideoMuted;
+        private int LampHoursTotal;
+        private int LampHoursUsed;
+        private string? ModelNumber;
+        private string? SerialNumber;
 
     #region IObservable    
         private List<IObserver<DeviceStatus>> Observers;
@@ -39,105 +43,6 @@ namespace Cave.DeviceControllers.Projectors.NEC
     #endregion
 #endregion
 
-#region Operational data
-        private static Dictionary<(int, int), Input> InputState = new Dictionary<(int is1, int is2), Input>()
-        {
-            { (0x01, 0x01), Input.RGB1 },
-            { (0x02, 0x01), Input.RGB2 },
-            { (0x03, 0x01), Input.RGB2 },       /*COMPUTER 3, present on very few models and there are at least 3 different codes for this one */
-            { (0x01, 0x06), Input.HDMI1 },
-            { (0x01, 0x21), Input.HDMI1 },
-            { (0x02, 0x06), Input.HDMI2 },
-            { (0x02, 0x21), Input.HDMI2 },
-            { (0x01, 0x20), Input.HDMI2 },      /*DVI-D*/
-            { (0x01, 0x0a), Input.HDMI2 },      /*Stereo DVI (?)*/
-            { (0x01, 0x02), Input.Video },
-            { (0x01, 0x03), Input.Video },      /*S-video*/
-            { (0x03, 0x04), Input.Video },      /*YPrPb*/
-            { (0x01, 0x22), Input.DisplayPort },
-            { (0x02, 0x22), Input.DisplayPort },/*DP 2*/
-            { (0x01, 0x27), Input.HDBaseT },
-            { (0x01, 0x28), Input.SDI },
-            { (0x02, 0x28), Input.SDI },        /*SDI 2*/
-            { (0x03, 0x28), Input.SDI },        /*SDI 3*/
-            { (0x04, 0x28), Input.SDI },        /*SDI 4*/
-            { (0x01, 0x07), Input.Other },      /*Viewer*/
-            { (0x02, 0x07), Input.Other },      /*LAN*/
-            { (0x03, 0x06), Input.Other },      /*SLOT*/
-            { (0x04, 0x07), Input.Other },      /*Viewer*/
-            { (0x05, 0x07), Input.Other },      /*APPS*/
-            { (0x01, 0x23), Input.Other }       /*SLOT*/
-        };
-        private Dictionary<int, Dictionary<int, string?>> ErrorStates = new Dictionary<int, Dictionary<int, string?>>()
-        {
-            {
-                0,
-                new Dictionary<int, string?> {
-                    { 0x80, "Lamp 1 must be replaced (exceeded maximum hours)" },
-                    { 0x40, "Lamp 1 failed to light" },
-                    { 0x20, "Power error" },
-                    { 0x10, "Fan error" },
-                    { 0x08, "Fan error" },
-                    { 0x04, null },
-                    { 0x02, "Temperature error (bi-metallic strip)" },
-                    { 0x01, "Lamp cover error" }
-                }
-            },
-            {
-                1,
-                new Dictionary<int, string?> {
-                    { 0x80, "Refer to extended error status" },
-                    { 0x40, null },
-                    { 0x20, null },
-                    { 0x10, null },
-                    { 0x08, null },
-                    { 0x04, "Lamp 2 failed to light" },
-                    { 0x02, "Formatter error" },
-                    { 0x01, "Lamp 1 needs replacing soon"}
-                }
-            },
-            {
-                2,
-                new Dictionary<int, string?> {
-                    { 0x80, "Lamp 2 needs replacing soon" },
-                    { 0x40, "Lamp 2 must be replaced (exceeded maximum hours)" },
-                    { 0x20, "Mirror cover error" },
-                    { 0x10, "Lamp 1 data error" },
-                    { 0x08, "Lamp 1 not present" },
-                    { 0x04, "Temperature error (sensor)" },
-                    { 0x02, "FPGA error" },
-                    { 0x01, null }
-                }
-            },
-            {
-                3,
-                new Dictionary<int, string?> {
-                    { 0x80, "The lens is not installed properly" },
-                    { 0x40, "Iris calibration error" },
-                    { 0x20, "Ballast communication error" },
-                    { 0x10, null },
-                    { 0x08, "Foreign matter sensor error" },
-                    { 0x04, "Temperature error due to dust" },
-                    { 0x02, "Lamp 2 data error" },
-                    { 0x01, "Lamp 2 not present" }
-                }
-            },
-            {
-                8,
-                new Dictionary<int, string?> {
-                    { 0x80, null },
-                    { 0x40, null },
-                    { 0x20, null },
-                    { 0x10, null },
-                    { 0x08, "System error has occurred (formatter)" },
-                    { 0x04, "System error has occurred (slave CPU)" },
-                    { 0x02, "The interlock switch is open" },
-                    { 0x01, "The portrait cover side is up" }
-                }
-            }
-        };
-#endregion
-
 #region Constructor
         public NECProjector(string address, int port=7142)
         {
@@ -152,7 +57,21 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 this.Client = await Client.Create(this, IpAddress!, Port);
                 
-                // call a separate method to get basic info like model, serial #, lamp life
+                // Get model, serial #, and total lamp life & report back to observers
+                await this.GetModelNumber();
+                await this.GetSerialNumber();
+                await this.GetLampInfo(LampInfo.UsageTimeSeconds);
+                await this.GetLampInfo(LampInfo.GoodForSeconds);
+                foreach ( var observer in Observers )
+                {
+                    observer.OnNext(new DeviceStatus
+                    {
+                        ModelNumber = this.ModelNumber,
+                        SerialNumber = this.SerialNumber,
+                        LampHoursUsed = this.LampHoursUsed,
+                        LampHoursTotal = this.LampHoursTotal
+                    });
+                }
             }
             catch
             {
@@ -178,10 +97,46 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         }
         */
-#endregion
+        #endregion
 
-#region Private methods
+        #region Private methods
 
+        /**
+        * There's a decision to make here regarding how methods like
+        * SelectInput, etc handle notifying observers about status updates.
+        * 
+        * One is by calling GetStatus() and letting it scrape up what changed
+        * and pass it to the observers.  The other is by calling observer.OnNext
+        * directly with a minimal object containing what changed and a
+        * notification message to display.
+        *         
+        * The data contained in a DeviceStatus instance is intended to be used
+        * for databinding purposes, eg. changing a mute button class to active
+        * depending on the value of AudioMuted, etc.  The Message property is
+        * intended for quick useful notifications to display eg. in a popup.
+        * 
+        * The disadvantages of the first way are that it involves extra steps
+        * (like fetching data a second time, including data that wasn't directly
+        * requested like lamp data) and that it doesn't pass a useful message
+        * directly to the observers.  That can be fixed by including an optional
+        * string message parameter to GetStatus() to be packaged up and sent
+        * along with the status data, but then the method should really be
+        * renamed to something like "UpdateStatus" to better reflect what it does.
+        * 
+        * This approach still seems messy and I haven't fully committed to
+        * either way yet.  Considering a middle ground for now.  I've separated
+        * the GetStatus behavior from the NotifyObservers behavior and given
+        * NotifyObservers a message parameter.  An ordinary GetStatus call should
+        * update the UI without displaying any notifications, but SelectInput
+        * and methods like it can simply update their associated fields and then
+        * call NotifyObservers with an appropriate notification message.
+        */
+
+        
+        /// <summary>
+        /// Fetch current device status and store in several private fields
+        /// that will be referenced by NotifyObservers
+        /// </summary>
         private async Task<Response> GetStatus()
         {
             try
@@ -189,13 +144,33 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 var response = await Client!.SendCommandAsync(Command.GetStatus);
                 this.PowerState = Enumeration.FromValue<PowerState>(response.Data[6]);
                 var inputTuple = (response.Data[8], response.Data[9]);
-                this.InputSelected = InputState.GetValueOrDefault(inputTuple);
+                this.InputSelected = InputStates.GetValueOrDefault(inputTuple);
                 this.VideoMuted = (response.Data[11] == 0x01);
                 this.AudioMuted = (response.Data[12] == 0x01);
-                
-                // get lamp hours if device has a lamp
-                // ...
+                // Get lamp hours if device has a lamp
+                await this.GetLampInfo(LampInfo.UsageTimeSeconds);
 
+                NotifyObservers();
+
+                return response;
+            }
+            catch ( Exception ex )
+            {
+                Logger.Error($"NECProjector.{nameof(GetStatus)} :: {ex}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Notify subscribers about current device status, passing an optional
+        /// message of the given type (Info, Success, Warning, Error).
+        /// </summary>
+        /// <param name="message">An optional message to display</param>
+        /// <param name="type">The type or severity level of the message to display</param>
+        private void NotifyObservers(string? message = null, MessageType type = MessageType.Info)
+        {
+            try
+            {
                 foreach ( var observer in this.Observers )
                 {
                     observer.OnNext(new DeviceStatus
@@ -203,27 +178,92 @@ namespace Cave.DeviceControllers.Projectors.NEC
                         PowerState = this.PowerState,
                         InputSelected = this.InputSelected,
                         VideoMuted = this.VideoMuted,
-                        AudioMuted = this.AudioMuted
+                        AudioMuted = this.AudioMuted,
+                        LampHoursUsed = this.LampHoursUsed,
+                        Message = message,
+                        MessageType = type
                     });
                 }
-
-                return response;
             }
             catch ( Exception ex )
             {
-                Logger.Error(ex);
+                Logger.Error($"NECProjector.{nameof(NotifyObservers)} :: {ex}");
                 throw;
             }
         }
 
-        private async Task<List<string>> GetErrors( bool log = true )
+        private async Task<int> GetLampInfo(LampInfo info)
+        {
+            try
+            {
+                var response = await Client!.SendCommandAsync(Command.GetLampInfo.Prepare(0x00, (byte)info));
+                if ( response.IndicatesFailure )
+                    throw new NECCommandError(response.Data[5], response.Data[6]);
+
+                int value = BitConverter.ToInt32(response.Data[7..11], 0);
+                switch ( info )
+                {
+                    case LampInfo.GoodForSeconds:
+                        this.LampHoursTotal = (int)Math.Floor((double)value/3600);
+                        break;
+                    case LampInfo.UsageTimeSeconds:
+                        this.LampHoursUsed = (int)Math.Floor((double)value/3600);
+                        break;
+                }
+                return value;
+            }
+            catch( NECCommandError )
+            {
+                LampHoursTotal = LampHoursUsed = -1;
+                return -1;
+            }
+            catch( Exception ex )
+            {
+                Logger.Error($"NECProjector.{nameof(GetLampInfo)} :: {ex}");
+                throw;
+            }
+        }
+
+        private async Task<string> GetModelNumber()
+        {
+            try
+            {
+                var response = await Client!.SendCommandAsync(Command.GetModelNumber);
+                var data = response.Data[5..37];
+                this.ModelNumber = Encoding.UTF8.GetString(data).TrimEnd('\0');
+                return this.ModelNumber;
+            }
+            catch ( Exception ex )
+            {
+                Logger.Error($"NECProjector.{nameof(GetModelNumber)} :: {ex}");
+                throw;
+            }
+        }
+
+        private async Task<string> GetSerialNumber()
+        {
+            try
+            {
+                var response = await Client!.SendCommandAsync(Command.GetSerialNumber);
+                var data = response.Data[7..23];
+                this.SerialNumber = Encoding.UTF8.GetString(data).TrimEnd('\0');
+                return this.SerialNumber;
+            }
+            catch ( Exception ex )
+            {
+                Logger.Error($"NECProjector.{nameof(GetSerialNumber)} :: {ex}");
+                throw;
+            }
+        }
+
+        private async Task<List<string>> GetErrors( bool logErrors = true )
         {
             try
             {
                 var response = await Client!.SendCommandAsync(Command.GetErrors);
                 List<string> errors = ParseErrors(response);
 
-                if ( errors.Count > 0 && log )
+                if ( errors.Count > 0 && logErrors )
                 {
                     string errorString = String.Join(Environment.NewLine, errors);
                     string logString = "Projector errors were reported: " +
@@ -233,8 +273,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 return errors;
             }
             catch ( Exception ex )
-            { 
-                Logger.Error(ex);
+            {
+                Logger.Error($"NECProjector.{nameof(GetErrors)} :: {ex}");
                 throw;
             }
         }
@@ -260,7 +300,14 @@ namespace Cave.DeviceControllers.Projectors.NEC
 
         #endregion
 
-        #region Public methods
+#region Public methods
+
+        public override IDisposable Subscribe( IObserver<DeviceStatus> observer )
+        {
+            if ( !Observers.Contains(observer) )
+                Observers.Add(observer);
+            return new Unsubscriber(Observers, observer);
+        }
 
         public override async Task PowerOn()
         {
@@ -268,7 +315,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await Client!.SendCommandAsync(Command.PowerOn);
                 if ( response.IndicatesFailure )
-                    throw new CommandError(response.Data[5], response.Data[6]);
+                    throw new NECCommandError(response.Data[5], response.Data[6]);
             }
             catch ( Exception ex )
             {
@@ -284,7 +331,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await Client!.SendCommandAsync(Command.PowerOff);
                 if ( response.IndicatesFailure )
-                    throw new CommandError(response.Data[5], response.Data[6]);
+                    throw new NECCommandError(response.Data[5], response.Data[6]);
             }
             catch ( Exception ex )
             {
@@ -300,10 +347,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await GetStatus();
                 if ( response.IndicatesFailure )
-                    throw new CommandError(response.Data[5], response.Data[6]);
+                    throw new NECCommandError(response.Data[5], response.Data[6]);
 
-                // On success Data[6] holds what we want
-                //var powerState = Enumeration.FromValue<PowerState>(response.Data[6]);
                 return this.PowerState;
             }
             catch ( Exception ex )
@@ -330,19 +375,10 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 var response = await Client!.SendCommandAsync(Command.SelectInput.Prepare(input));
 
                 if ( response.IndicatesFailure )
-                    throw new CommandError(response.Data[5], response.Data[6]);
-                else
-                {
-                    // await GetStatus();
-                    foreach ( var observer in Observers )
-                    {
-                        observer.OnNext(new DeviceStatus
-                        {
-                            InputSelected=input,
-                            Message=$"Input '{input}' selected."
-                        });
-                    }
-                }
+                    throw new NECCommandError(response.Data[5], response.Data[6]);
+
+                this.InputSelected = input;
+                NotifyObservers($"Input '{input}' selected.", MessageType.Success);
             }
             catch ( Exception ex )
             {
@@ -358,10 +394,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await GetStatus();
                 if ( response.IndicatesFailure )
-                    throw new CommandError(response.Data[5], response.Data[6]);
+                    throw new NECCommandError(response.Data[5], response.Data[6]);
 
-                //var tuple = (response.Data[8], response.Data[9]);
-                //var inputSelected = InputState.GetValueOrDefault(tuple);
                 return this.InputSelected;
             }
             catch ( Exception ex )
@@ -382,7 +416,6 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 await PowerOn();
                 while ( !deviceReady && failureReason is null )
                 {
-                    // this is weird and I'm not sure if it works properly in edge cases
                     var state = await GetPowerState() as PowerState;
                     string? stateName = state?.Name;
                     switch ( stateName )
@@ -412,7 +445,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                             break;
                         /* Startup failed, likely a lamp or temperature sensor error */
                         case nameof(PowerState.StandbyError):
-                            var errors = await GetErrors(log:false);
+                            var errors = await GetErrors(logErrors:false);
                             failureReason = "Device reporting error(s):" +
                                 Environment.NewLine + string.Join(Environment.NewLine, errors);
                             throw new Exception(failureReason);
@@ -463,7 +496,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                     Logger.Warn(failureReason);
                 }
 
-                await Task.Delay(500);
+                await Task.Delay(100);
                 await SelectInput(input);
             }
             catch ( Exception ex )
@@ -480,7 +513,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await Client!.SendCommandAsync(muted ? Command.DisplayMuteOn : Command.DisplayMuteOff);
                 if ( response.IndicatesFailure )
-                    throw new CommandError(response.Data[5], response.Data[6]);
+                    throw new NECCommandError(response.Data[5], response.Data[6]);
+                
                 // await GetStatus();
             }
             catch ( Exception ex )
@@ -491,18 +525,25 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         }
 
-        public override IDisposable Subscribe( IObserver<DeviceStatus> observer )
+        public override async Task<bool> IsDisplayMuted()
         {
-            if ( !Observers.Contains(observer) )
-                Observers.Add(observer);
-            return new Unsubscriber(Observers, observer);
+            try
+            {
+                var response = await GetStatus();
+                if ( response.IndicatesFailure )
+                    throw new NECCommandError(response.Data[5], response.Data[6]);
+
+                return (this.VideoMuted == true);
+            }
+            catch ( Exception ex )
+            {
+                foreach ( var observer in Observers )
+                    observer.OnError(ex);
+                throw;
+            }
         }
 
-
-
-        #endregion
-
-
+#endregion
 
     }
 }

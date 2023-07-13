@@ -16,8 +16,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
         private static readonly Logger Logger = LogManager.GetLogger("NECProjector");
         private PowerState? PowerState;
         private Input? InputSelected;
-        private bool? AudioMuted;
-        private bool? VideoMuted;
+        private bool AudioMuted;
+        private bool VideoMuted;
         private int LampHoursTotal;
         private int LampHoursUsed;
         private string? ModelNumber;
@@ -533,7 +533,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 if ( response.IndicatesFailure )
                     throw new NECCommandError(response.Data[5], response.Data[6]);
 
-                return (this.VideoMuted == true);
+                return this.VideoMuted;
             }
             catch ( Exception ex )
             {

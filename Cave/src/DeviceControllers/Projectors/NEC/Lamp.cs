@@ -1,4 +1,4 @@
-﻿namespace Cave.src.DeviceControllers.Projectors.NEC
+﻿namespace Cave.DeviceControllers.Projectors.NEC
 {
     public enum LampNumber
     {

@@ -3,7 +3,6 @@ using System.Text;
 using NLog;
 
 using Cave.Utils;
-using Cave.src.DeviceControllers.Projectors.NEC;
 
 namespace Cave.DeviceControllers.Projectors.NEC
 {
@@ -79,60 +78,10 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         }
 
-        /* Unused for now */
-        /*
-        public static async Task<NECProjector> Create(string ip, int port=7142, bool initialize=true)
-        {
-            try
-            {
-                logger.Info("Creating new NECProjector instance");
-                NECProjector instance = new(ip, port);
-                if( initialize )
-                    instance.client = await Client.Create(instance, ip, port);
-                return instance;
-            }
-            catch(Exception)
-            {
-                throw;
-            }
-        }
-        */
-        #endregion
+#endregion
 
-        #region Private methods
+#region Private methods
 
-        /**
-        * There's a decision to make here regarding how methods like
-        * SelectInput, etc handle notifying observers about status updates.
-        * 
-        * One is by calling GetStatus() and letting it scrape up what changed
-        * and pass it to the observers.  The other is by calling observer.OnNext
-        * directly with a minimal object containing what changed and a
-        * notification message to display.
-        *         
-        * The data contained in a DeviceStatus instance is intended to be used
-        * for databinding purposes, eg. changing a mute button class to active
-        * depending on the value of AudioMuted, etc.  The Message property is
-        * intended for quick useful notifications to display eg. in a popup.
-        * 
-        * The disadvantages of the first way are that it involves extra steps
-        * (like fetching data a second time, including data that wasn't directly
-        * requested like lamp data) and that it doesn't pass a useful message
-        * directly to the observers.  That can be fixed by including an optional
-        * string message parameter to GetStatus() to be packaged up and sent
-        * along with the status data, but then the method should really be
-        * renamed to something like "UpdateStatus" to better reflect what it does.
-        * 
-        * This approach still seems messy and I haven't fully committed to
-        * either way yet.  Considering a middle ground for now.  I've separated
-        * the GetStatus behavior from the NotifyObservers behavior and given
-        * NotifyObservers a message parameter.  An ordinary GetStatus call should
-        * update the UI without displaying any notifications, but SelectInput
-        * and methods like it can simply update their associated fields and then
-        * call NotifyObservers with an appropriate notification message.
-        */
-
-        
         /// <summary>
         /// Fetch current device status and store in several private fields
         /// that will be referenced by NotifyObservers
@@ -198,7 +147,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await Client!.SendCommandAsync(Command.GetLampInfo.Prepare(0x00, (byte)info));
                 if ( response.IndicatesFailure )
-                    throw new NECCommandError(response.Data[5], response.Data[6]);
+                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
 
                 int value = BitConverter.ToInt32(response.Data[7..11], 0);
                 switch ( info )
@@ -212,7 +161,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 }
                 return value;
             }
-            catch( NECCommandError )
+            catch( NECProjectorCommandError )
             {
                 LampHoursTotal = LampHoursUsed = -1;
                 return -1;
@@ -256,19 +205,17 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         }
 
-        private async Task<List<string>> GetErrors( bool logErrors = true )
+        private async Task<List<NECProjectorError>> GetErrors( bool logErrors = true )
         {
             try
             {
                 var response = await Client!.SendCommandAsync(Command.GetErrors);
-                List<string> errors = ParseErrors(response);
-
+                var errors = NECProjectorError.GetErrorsFromResponse(response);
                 if ( errors.Count > 0 && logErrors )
                 {
-                    string errorString = String.Join(Environment.NewLine, errors);
-                    string logString = "Projector errors were reported: " +
-                        Environment.NewLine + $"{errorString}";
-                    Logger.Warn(logString);
+                    Logger.Warn("Device is reporting the following internal error(s):");
+                    foreach ( var error in errors )
+                        Logger.Warn(error);
                 }
                 return errors;
             }
@@ -279,26 +226,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         }
 
-        private List<string> ParseErrors( Response response )
-        {
-            List<string> errorsReported = new List<string>();
-            var relevantBytes = response.Data[5..14];
-            foreach ( var outerPair in ErrorStates )
-            {
-                int byteKey = outerPair.Key;
-                Dictionary<int, string?> errorData = outerPair.Value;
-                foreach ( var innerPair in errorData )
-                {
-                    int bitKey = innerPair.Key;
-                    string? errorMsg = innerPair.Value;
-                    if ( ( relevantBytes[byteKey] & bitKey ) != 0 && errorMsg != null )
-                        errorsReported.Add(errorMsg);
-                }
-            }
-            return errorsReported;
-        }
-
-        #endregion
+#endregion
 
 #region Public methods
 
@@ -309,13 +237,84 @@ namespace Cave.DeviceControllers.Projectors.NEC
             return new Unsubscriber(Observers, observer);
         }
 
+        // Cancellable awaitable PowerOn
+
+        /// <summary>
+        /// Attempts to power on the projector and awaits until either an operable state is reached, a failure reason
+        /// is detected, or the operation times out.
+        /// </summary>
+        /// <param name="cancellationToken">The cancellation token used for canceling this operation.</param>
+        /// <returns>True if device reaches ready state before the operation is canceled. False if a non-exception
+        /// throwing reason for failure is detected.</returns>
+        /// <exception cref="OperationCanceledException">If cancellation is requested before completion.</exception>
+        /// <exception cref="InvalidOperationException">If device's power state cannot be determined reliably.
+        /// </exception>
+        /// <exception cref="AggregateException">A collection of one or more NECProjectorError instances if projector
+        /// errors are detected that would prevent PowerOn from succeeding.</exception>
+        private async Task<bool> AwaitPowerOn(CancellationToken cancellationToken)
+        {
+            bool deviceReady = false;
+            string? failureReason = null;
+            try
+            {
+                var response = await Client!.SendCommandAsync(Command.PowerOn);
+                if ( response.IndicatesFailure )
+                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
+
+                while ( !deviceReady && failureReason is null )
+                {
+                    if ( cancellationToken.IsCancellationRequested )
+                        throw new OperationCanceledException("PowerOn operation timed out.");
+
+                    var state = await GetPowerState();
+
+                    if ( state is null )
+                        throw new InvalidOperationException("Failed to read device state.  Please notify IT.");
+
+                    else if ( state == PowerState.On || state == PowerState.Warming )
+                        deviceReady = true;
+
+                    else if ( state == PowerState.Cooling )
+                        failureReason = "Device is cooling.  Please wait until power cycle is complete.";
+
+                    else if ( state == PowerState.StandbySleep ||
+                            state == PowerState.StandbyNetwork ||
+                            state == PowerState.StandbyPowerSaving )
+                        failureReason = "Device in standby.  Please wait for power on before input selection.";
+
+                    else if ( state == PowerState.StandbyError )
+                    {
+                        var errors = await GetErrors();
+                        failureReason = "Device is reporting one or more errors.";
+                        throw new AggregateException(failureReason, errors);
+                    }
+
+                    else if ( state == PowerState.Unknown )
+                        failureReason = "Device is busy.  Please wait.";
+
+                    // Device is initializing, wait a second and check again
+                    else
+                        await Task.Delay(1000, cancellationToken);
+                }
+
+                if ( failureReason is not null )
+                    Logger.Warn(failureReason);
+
+                return deviceReady;
+            }
+            catch
+            {
+                throw;
+            }
+        }
+
         public override async Task PowerOn()
         {
             try
             {
                 var response = await Client!.SendCommandAsync(Command.PowerOn);
                 if ( response.IndicatesFailure )
-                    throw new NECCommandError(response.Data[5], response.Data[6]);
+                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
             }
             catch ( Exception ex )
             {
@@ -325,13 +324,14 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         }
 
+
         public override async Task PowerOff()
         {
             try
             {
                 var response = await Client!.SendCommandAsync(Command.PowerOff);
                 if ( response.IndicatesFailure )
-                    throw new NECCommandError(response.Data[5], response.Data[6]);
+                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
             }
             catch ( Exception ex )
             {
@@ -347,7 +347,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await GetStatus();
                 if ( response.IndicatesFailure )
-                    throw new NECCommandError(response.Data[5], response.Data[6]);
+                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
 
                 return this.PowerState;
             }
@@ -375,7 +375,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 var response = await Client!.SendCommandAsync(Command.SelectInput.Prepare(input));
 
                 if ( response.IndicatesFailure )
-                    throw new NECCommandError(response.Data[5], response.Data[6]);
+                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
 
                 this.InputSelected = input;
                 NotifyObservers($"Input '{input}' selected.", MessageType.Success);
@@ -394,7 +394,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await GetStatus();
                 if ( response.IndicatesFailure )
-                    throw new NECCommandError(response.Data[5], response.Data[6]);
+                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
 
                 return this.InputSelected;
             }
@@ -406,98 +406,76 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         }
 
+        
+        //public override async Task PowerOnSelectInput( object input )
+        //{
+        //    bool deviceReady = false;
+        //    string? failureReason = null;
+
+        //    try
+        //    {
+        //        await PowerOn();
+        //        while ( !deviceReady && failureReason is null )
+        //        {
+        //            var state = await GetPowerState();
+
+        //            if ( state is null )
+        //                throw new InvalidOperationException("Failed to read device state.  Please notify IT.");
+
+        //            else if ( state == PowerState.On || state == PowerState.Warming )
+        //                deviceReady = true;
+
+        //            else if ( state == PowerState.Cooling )
+        //                failureReason = "Device is cooling.  Please wait until power cycle is complete.";
+
+        //            else if ( state == PowerState.StandbySleep ||
+        //                    state == PowerState.StandbyNetwork ||
+        //                    state == PowerState.StandbyPowerSaving )
+        //                failureReason = "Device in standby.  Please wait for power on before input selection.";
+
+        //            else if ( state == PowerState.StandbyError )
+        //            {
+        //                var errors = await GetErrors();
+        //                failureReason = "Device is reporting one or more errors.";
+        //                throw new AggregateException(failureReason, errors);
+        //            }
+
+        //            else if ( state == PowerState.Unknown )
+        //                failureReason = "Device is busy.  Please wait.";
+
+        //            // Device is initializing, wait a second and try again
+        //            else                      
+        //                await Task.Delay(1000);
+        //        }
+        //    }
+        //    catch ( Exception ex )
+        //    {
+        //        foreach ( var observer in Observers )
+        //            observer.OnError(ex);
+        //        throw;
+        //    }
+        //    finally
+        //    {
+        //        if ( failureReason is not null )
+        //            Logger.Warn(failureReason);
+
+        //        if ( deviceReady )
+        //        {
+        //            await Task.Delay(100);
+        //            await SelectInput(input);
+        //        }
+        //    }
+        //}
+
         public override async Task PowerOnSelectInput( object input )
         {
             try
             {
-                bool deviceReady = false;
-                string? failureReason = null;
-
-                await PowerOn();
-                while ( !deviceReady && failureReason is null )
-                {
-                    var state = await GetPowerState() as PowerState;
-                    string? stateName = state?.Name;
-                    switch ( stateName )
-                    {
-                        /* This means our query failed, maybe our documentation
-                           is out of date? */
-                        case null:
-                            failureReason = "Failed to get device power state.  Please notify IT.";
-                            throw new Exception(failureReason);
-                        /* Device started normally (hopefully) and should be
-                           ready to accept further commands soon */
-                        case nameof(PowerState.Warming):
-                        case nameof(PowerState.On):
-                            deviceReady = true;
-                            break;
-                        /* Device may have already been cooling down, or it may
-                           have failed to start and gone straight to cooling. */
-                        case nameof(PowerState.Cooling):
-                            failureReason = "Device is cooling.  Please wait until power cycle is complete.";
-                            break;
-                        /* Device may have already been in the process of shutting
-                           down and has now finished. */
-                        case nameof(PowerState.StandbySleep):
-                        case nameof(PowerState.StandbyNetwork):
-                        case nameof(PowerState.StandbyPowerSaving):
-                            failureReason = "Device in standby.  Please wait for power on before input selection.";
-                            break;
-                        /* Startup failed, likely a lamp or temperature sensor error */
-                        case nameof(PowerState.StandbyError):
-                            var errors = await GetErrors(logErrors:false);
-                            failureReason = "Device reporting error(s):" +
-                                Environment.NewLine + string.Join(Environment.NewLine, errors);
-                            throw new Exception(failureReason);
-                        /* Seems to report this while busy with other commands */
-                        case nameof(PowerState.Unknown):
-                            failureReason = "Device is busy.  Please wait.";
-                            break;
-                        /* Initializing, Starting */
-                        default:
-                            await Task.Delay(1000);
-                            continue;
-                    }
-/*
-                    if( state == PowerState.On || state == PowerState.Warming )
-                    {
-                        break;
-                    }
-                    else if( state == PowerState.Cooling )
-                    {
-                        logger.Warn("Device in cooling state.  Please wait until it powers off completely.");
-                        failed = true;
-                    }
-                    else if( state == PowerState.StandbySleep || 
-                        state == PowerState.StandbyNetwork ||
-                        state == PowerState.StandbyPowerSaving )
-                    {
-                        logger.Warn("Device in standby.  Please wait for PowerOn before attempting input selection.");
-                        failed = true;
-                    }
-                    else if( state == PowerState.StandbyError )
-                    {
-                        logger.Warn("Device is in error state.");
-                        failed = true;
-                        var errors = await GetErrors();
-                        logger.Warn(errors);
-                        throw new Exception(errors);
-                    }
-                    else if( state == PowerState.Unknown )
-                    {
-                        logger.Warn("Device in unknown state.");
-                        failed = true;
-                    }
-*/
-                }
-
-                if ( failureReason is not null )
-                {
-                    Logger.Warn(failureReason);
-                }
-
-                await Task.Delay(100);
-                await SelectInput(input);
+                CancellationTokenSource cts = new();
+                // Cancel if it takes longer than 2 minutes
+                cts.CancelAfter(120000);
+                if ( await AwaitPowerOn(cts.Token) )
+                    await SelectInput(input);
             }
             catch ( Exception ex )
             {
@@ -507,15 +485,17 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         }
 
+
         public override async Task DisplayMute( bool muted )
         {
             try
             {
                 var response = await Client!.SendCommandAsync(muted ? Command.DisplayMuteOn : Command.DisplayMuteOff);
                 if ( response.IndicatesFailure )
-                    throw new NECCommandError(response.Data[5], response.Data[6]);
+                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
                 
-                // await GetStatus();
+                this.VideoMuted = muted;
+                NotifyObservers(string.Format("Video mute {0}", (muted?"ON":"OFF")));
             }
             catch ( Exception ex )
             {
@@ -531,7 +511,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await GetStatus();
                 if ( response.IndicatesFailure )
-                    throw new NECCommandError(response.Data[5], response.Data[6]);
+                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
 
                 return this.VideoMuted;
             }

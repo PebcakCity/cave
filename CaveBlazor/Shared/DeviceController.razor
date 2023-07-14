@@ -2,7 +2,7 @@
 @using Cave.DeviceControllers
 @using Cave.DeviceControllers.Projectors
 @using Cave.DeviceControllers.Projectors.NEC
-
+	
 @inject IToastService ToastService
 @implements IObserver<DeviceStatus>
 
@@ -243,7 +243,7 @@ else
                 ToastService.ShowError( e.Message );
             }
         }
-        else if ( exception is NECCommandError nce )
+        else if ( exception is NECProjectorCommandError nce )
         {
             ToastService.ShowError( nce );
         }

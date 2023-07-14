@@ -17,12 +17,16 @@ namespace CaveTests
             ExceptionsTest6();
         }
 
+        /**
+         * Will need to remove all references to ErrorTuple in tests when it goes private
+         */
+
         static void ExceptionsTest1()
         {
             string message = "My custom message instead of the default.";
             try
             {
-                throw new NECCommandError((0, 0), message);
+                throw new NECProjectorCommandError((0, 0), message);
             }
             catch ( DeviceCommandError e )
             {
@@ -37,14 +41,14 @@ namespace CaveTests
         {
             try
             {
-                throw new NECCommandError((0, 1));
+                throw new NECProjectorCommandError((0, 1));
             }
             catch ( DeviceCommandError e )
             {
                 // Should output the default message for error code (0, 1):
                 // "The command is not supported by the model in use."
                 Console.WriteLine(e.Message);
-                Exception e2 = new NECCommandError((0, 1));
+                Exception e2 = new NECProjectorCommandError((0, 1));
                 Debug.Assert(e.Message.Equals("The command is not supported by the model in use."));
                 Debug.Assert(e.Message.Equals(e2.Message));
                 Console.WriteLine("Exceptions test 2 passed");
@@ -54,9 +58,9 @@ namespace CaveTests
         static void ExceptionsTest3()
         {
             // "The command cannot be accepted because the power is off."
-            NECCommandError cce1 = new((0x02, 0x0d));
+            NECProjectorCommandError cce1 = new((0x02, 0x0d));
             // "No signal"
-            NECCommandError cce2 = new((0x02, 0x07));
+            NECProjectorCommandError cce2 = new((0x02, 0x07));
 
             try
             {
@@ -77,15 +81,15 @@ namespace CaveTests
         static void ExceptionsTest4()
         {
             // Default message is "Memory in use"
-            NECCommandError cce1 = new((2, 2), "A custom message goes here.");
+            NECProjectorCommandError cce1 = new((2, 2), "A custom message goes here.");
             // "The specified input terminal is invalid."
-            NECCommandError cce2 = new((1, 1));
+            NECProjectorCommandError cce2 = new((1, 1));
             try
             {
                 cce1.ErrorTuple = cce2.ErrorTuple;
                 throw cce1;
             }
-            catch( NECCommandError e )
+            catch( NECProjectorCommandError e )
             {
                 // Should still write "A custom message goes here."
                 Console.WriteLine(e.Message);
@@ -98,7 +102,7 @@ namespace CaveTests
 
         static void ExceptionsTest5()
         {
-            NECCommandError cce1 = new((2, 2));
+            NECProjectorCommandError cce1 = new((2, 2));
             try
             {
                 throw cce1;
@@ -107,7 +111,7 @@ namespace CaveTests
             {
                 Console.WriteLine(e.Message);
                 Debug.Assert(e.Message.Equals("Memory in use"));
-                if ( e is NECCommandError cce )
+                if ( e is NECProjectorCommandError cce )
                 {
                     Console.WriteLine($"cce.ErrorTuple == {cce.ErrorTuple}");
                     Console.WriteLine("Exceptions test 5 passed");
@@ -118,7 +122,7 @@ namespace CaveTests
         static void ExceptionsTest6()
         {
             string message = "A custom message for 2,2";
-            NECCommandError cce1 = new((2, 2), message);
+            NECProjectorCommandError cce1 = new((2, 2), message);
             try
             {
                 throw cce1;
@@ -135,7 +139,7 @@ namespace CaveTests
                 {
                     Console.WriteLine("Type is DeviceCommandError");
                     // 
-                    if ( dce is NECCommandError cce )
+                    if ( dce is NECProjectorCommandError cce )
                     {
                         Console.WriteLine("Type is ConcreteCommandError");
                         Console.WriteLine(cce.Message);

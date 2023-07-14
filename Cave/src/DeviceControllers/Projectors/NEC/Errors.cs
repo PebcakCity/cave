@@ -80,7 +80,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
     /// <summary>
     /// Represents an error due to a failed command
     /// </summary>
-    public class NECCommandError : Exception
+    public class NECCommandError : DeviceCommandError
     {
         /// <summary>
         /// Error codes corresponding to command failure reasons
@@ -110,23 +110,36 @@ namespace Cave.DeviceControllers.Projectors.NEC
             { (0x03, 0x02), "Adjustment failed." }
         };
 
-        public string ErrorCode { get; }
-        public override string Message { get; }
-        public NECCommandError((int byte1, int byte2) code, string? message=null) 
+        private readonly string? _message;
+
+        public (int Byte1, int Byte2) ErrorTuple { get; set; }
+        public string ErrorCode
         {
-            this.ErrorCode = string.Format("{x2}{x2}", code.byte1, code.byte2);
-            this.Message = message
-                ?? ErrorCodes.GetValueOrDefault(code)
-                ?? "Unknown error";
+            get
+            {
+                return string.Format("{0:x2}{1:x2}", ErrorTuple.Byte1, ErrorTuple.Byte2);
+            }
         }
-
-        public NECCommandError(int byte1, int byte2) : this((byte1, byte2)) { }
-
+        public override string Message
+        {
+            get
+            {
+                return _message ?? ErrorCodes.GetValueOrDefault(ErrorTuple) ?? "Unknown error";
+            }
+        }
+        public NECCommandError() { }
+        public NECCommandError((int byte1, int byte2) errorTuple, string? customMessage = null)
+        {
+            this.ErrorTuple = errorTuple;
+            this._message = customMessage;
+        }
+        public NECCommandError( int byte1, int byte2 ) : this((byte1, byte2)) { }
         public override string ToString()
         {
-            return $"NECCommandError {ErrorCode} - {Message}";
+            return string.Format("NECCommandError {0} - {1}",
+                ErrorCode, Message);
         }
 
-        public static implicit operator string(NECCommandError error) => error.ToString();
+        public static implicit operator string( NECCommandError error ) => error.ToString();
     }
 }

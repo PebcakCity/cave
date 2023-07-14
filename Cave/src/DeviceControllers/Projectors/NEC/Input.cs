@@ -9,7 +9,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// A mapping of input codes reported by "basic information request"
         /// (Appendix p.30) to those used for selecting inputs (Appendix p.18)
         /// </summary>
-        private static Dictionary<(int, int), Input> InputStates = new Dictionary<(int is1, int is2), Input>()
+        private static readonly Dictionary<(int, int), Input> InputStates = new Dictionary<(int is1, int is2), Input>()
         {
             { (0x01, 0x01), Input.RGB1 },
             { (0x02, 0x01), Input.RGB2 },

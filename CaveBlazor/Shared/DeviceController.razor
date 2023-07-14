@@ -184,9 +184,10 @@ else
     /// <param name="status">DeviceStatus instance representing everything that changed</param>
     public void OnNext( DeviceStatus status )
     {
-        this.ModelNumber = status.ModelNumber;
-        this.SerialNumber = status.SerialNumber;
-
+        if ( status.ModelNumber != null )
+            this.ModelNumber = status.ModelNumber;
+        if ( status.SerialNumber != null )
+            this.SerialNumber = status.SerialNumber;
         if ( status.LampHoursTotal != null )
             this.LampHoursTotal = status.LampHoursTotal;
 

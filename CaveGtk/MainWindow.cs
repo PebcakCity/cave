@@ -6,6 +6,24 @@ using NLog;
 using Cave.DeviceControllers;
 using Cave.DeviceControllers.Projectors.NEC;
 
+/*
+Where to go from here with the GTK app:
+
+- Redo Glade interface to include a box at the top for entering the IP address,
+port, and device type (NEC, PJLink) and a button to connect to/initialize the
+device.  These controls should be able to be disabled and/or hidden if we get
+our connection information from a predefined config.
+
+- Create a config file just for this app that contains the connection info for
+our device.  Create a config reader class in Cave.Utils for reading this file
+and returning the info.  If the file exists and we get the info we need, fill in
+and/or disable the controls at the top for setting the address/port/device type.
+
+- Create a delegate that checks for the connection info and then instantiates
+the device and calls its Initialize method.  This delegate can be connected to
+the button click event and maybe the MainWindow's show (?) event.
+*/
+
 namespace CaveGtk
 {
     internal class MainWindow : Window, IObserver<DeviceStatus>

@@ -490,7 +490,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         {
             try
             {
-                var response = await Client!.SendCommandAsync(muted ? Command.DisplayMuteOn : Command.DisplayMuteOff);
+                var response = await Client!.SendCommandAsync(muted ? Command.VideoMuteOn : Command.VideoMuteOff);
                 if ( response.IndicatesFailure )
                     throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
                 

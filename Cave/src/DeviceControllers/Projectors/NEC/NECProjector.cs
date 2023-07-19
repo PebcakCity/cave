@@ -6,7 +6,7 @@ using Cave.Utils;
 
 namespace Cave.DeviceControllers.Projectors.NEC
 {
-    public partial class NECProjector : Projector
+    public partial class NECProjector : Projector, IAudio
     {
 #region Private fields
         private Client? Client = null;
@@ -524,7 +524,54 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         }
 
-#endregion
+        public Task VolumeUp()
+        {
+            throw new NotImplementedException("This feature is currently unimplemented.");
+        }
+
+        public Task VolumeDown()
+        {
+            throw new NotImplementedException("This feature is currently unimplemented.");
+        }
+
+        public async Task AudioMute( bool muted )
+        {
+            try
+            {
+                var response = await Client!.SendCommandAsync(muted ? Command.AudioMuteOn : Command.AudioMuteOff);
+                if ( response.IndicatesFailure )
+                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
+
+                this.AudioMuted = muted;
+                NotifyObservers(string.Format("Audio mute {0}", ( muted ? "ON" : "OFF" )));
+            }
+            catch ( Exception ex )
+            {
+                foreach ( var observer in Observers )
+                    observer.OnError(ex);
+                throw;
+            }
+        }
+
+        public async Task<bool> IsAudioMuted()
+        {
+            try
+            {
+                var response = await GetStatus();
+                if ( response.IndicatesFailure )
+                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
+
+                return this.AudioMuted;
+            }
+            catch ( Exception ex )
+            {
+                foreach ( var observer in Observers )
+                    observer.OnError(ex);
+                throw;
+            }
+        }
+
+        #endregion
 
     }
 }

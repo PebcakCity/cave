@@ -1,6 +1,6 @@
 namespace Cave.DeviceControllers
 {
-    public interface IAudio: IDevice
+    public interface IAudio
     {
         Task VolumeUp();
         Task VolumeDown();

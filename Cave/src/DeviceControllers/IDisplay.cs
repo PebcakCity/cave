@@ -1,6 +1,7 @@
 ﻿namespace Cave.DeviceControllers
 {
-    public interface IDisplay : IDevice
+    public interface IDisplay
+        //: IDevice
     {
         Task PowerOn();
         Task PowerOff();

@@ -524,14 +524,47 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         }
 
-        public Task VolumeUp()
+        public async Task VolumeUp()
         {
-            throw new NotImplementedException("This feature is currently unimplemented.");
+            try
+            {// relative adjustment, +1 volume unit
+                var response = await Client!.SendCommandAsync(Command.VolumeAdjust.Prepare(0x01, 0x01, 0x00));
+                if ( response.IndicatesFailure )
+                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
+
+                NotifyObservers("Volume +1");
+            }
+            catch ( Exception ex )
+            {
+                foreach ( var observer in Observers )
+                    observer.OnError(ex);
+                throw;
+            }
+
+            //throw new NotImplementedException("This feature is currently unimplemented.");
         }
 
-        public Task VolumeDown()
+        public async Task VolumeDown()
         {
-            throw new NotImplementedException("This feature is currently unimplemented.");
+            try
+            {// relative adjustment, -1 volume unit
+                // tried both one's and two's complement, not sure how to get this to work,
+                // VolumeUp seems to work fine
+                // tried reversing 2nd and 3rd bytes
+                var response = await Client!.SendCommandAsync(Command.VolumeAdjust.Prepare(0x01, unchecked((byte)~0x01), 0x00));
+                if ( response.IndicatesFailure )
+                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
+
+                NotifyObservers("Volume -1 (maybe)");
+            }
+            catch ( Exception ex )
+            {
+                foreach ( var observer in Observers )
+                    observer.OnError(ex);
+                throw;
+            }
+
+            //throw new NotImplementedException("This feature is currently unimplemented.");
         }
 
         public async Task AudioMute( bool muted )

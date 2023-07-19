@@ -29,6 +29,13 @@
             if( idm is Projector pj )
             {
                 <p>Lamp usage: @LampHoursText</p>
+                <br/>
+                if( pj is NECProjector )
+                {
+                    // let's add our volume testing buttons
+                    <button class="btn btn-secondary" @onclick="@VolumeUp">+</button>
+                    <button class="btn btn-secondary" @onclick="@VolumeDown">-</button>
+                }
             }
         }
     }
@@ -41,23 +48,23 @@ else
 @code {
     #nullable disable
 
-    #region Public fields / parameters
+        #region Public fields / parameters
 
-    [Parameter]
-    public string IpAddress { get; set; }
+        [Parameter]
+        public string IpAddress { get; set; }
 
-    [Parameter]
-    public int Port { get; set; }
+        [Parameter]
+        public int Port { get; set; }
 
-    [Parameter]
-    public string DeviceName { get; set; } = "Device";
+        [Parameter]
+        public string DeviceName { get; set; } = "Device";
 
-    [Parameter]
-    public string DeviceClass { get; set; }
+        [Parameter]
+        public string DeviceClass { get; set; }
 
     #endregion
 
-    #region Private fields
+        #region Private fields
 
     private Device Device = null;
     private bool DeviceReady = false;
@@ -148,6 +155,26 @@ else
             await idm.DisplayMute( muted );
         }
         catch { }
+    }
+
+    private async Task VolumeUp()
+    {
+        try
+        {
+            NECProjector nec = Device as NECProjector;
+            await nec.VolumeUp();
+        }
+        catch { }
+    }
+
+    private async Task VolumeDown()
+    {
+        try
+        {
+            NECProjector nec = Device as NECProjector;
+            await nec.VolumeDown();
+        }
+        catch { } 
     }
 
     #endregion

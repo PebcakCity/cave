@@ -7,7 +7,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
     {
         private static readonly Logger Logger = LogManager.GetLogger("NEC.Client");
         private readonly string? IpAddress = null;
-        private readonly int Port;
+        private readonly int Port=7142;
         private readonly NECProjector Device;
 
         private Client(NECProjector device, string ip, int port=7142)
@@ -37,16 +37,14 @@ namespace Cave.DeviceControllers.Projectors.NEC
         {
             try
             {
-                using (Socket socket = new Socket(AddressFamily.InterNetwork,
-                    SocketType.Stream, ProtocolType.Tcp))
-                {
-                    CancellationTokenSource cts = new();
-                    cts.CancelAfter(3000);
-                    var token = cts.Token;
-                    await socket.ConnectAsync(this.IpAddress!, this.Port, token);
-                    Logger.Info($"Connection success.");
-                    socket.Shutdown(SocketShutdown.Both);
-                }
+                using Socket socket = new Socket(AddressFamily.InterNetwork,
+                    SocketType.Stream, ProtocolType.Tcp);
+                CancellationTokenSource cts = new();
+                cts.CancelAfter(3000);
+                var token = cts.Token;
+                await socket.ConnectAsync(this.IpAddress!, this.Port, token);
+                Logger.Info($"Connection success.");
+                socket.Shutdown(SocketShutdown.Both);
             }
             catch(OperationCanceledException)
             {

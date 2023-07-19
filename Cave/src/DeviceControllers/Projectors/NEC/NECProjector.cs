@@ -6,12 +6,10 @@ using Cave.Utils;
 
 namespace Cave.DeviceControllers.Projectors.NEC
 {
-    public partial class NECProjector: Projector
+    public partial class NECProjector : Projector
     {
 #region Private fields
         private Client? Client = null;
-        private string? IpAddress;
-        private int Port;
         private static readonly Logger Logger = LogManager.GetLogger("NECProjector");
         private PowerState? PowerState;
         private Input? InputSelected;
@@ -43,18 +41,21 @@ namespace Cave.DeviceControllers.Projectors.NEC
 #endregion
 
 #region Constructor
-        public NECProjector(string address, int port=7142)
+        public NECProjector(string deviceName, string address, int port=7142, List<string>? inputs = null)
+            :base(deviceName, address, port)
         {
-            this.IpAddress = address;
+            this.Name = deviceName;
+            this.Address = address;
             this.Port = port;
             this.Observers = new List<IObserver<DeviceStatus>>();
+            this.InputsAvailable = inputs ?? new List<string> { "RGB1", "HDMI1" };
         }
 
         public override async Task Initialize()
         {
             try
             {
-                this.Client = await Client.Create(this, IpAddress!, Port);
+                this.Client = await Client.Create(this, Address, Port);
                 
                 // Get model, serial #, and total lamp life & report back to observers
                 await this.GetModelNumber();

@@ -50,7 +50,7 @@ else
     public int Port { get; set; }
 
     [Parameter]
-    public string DeviceName { get; set; }
+    public string DeviceName { get; set; } = "Device";
 
     [Parameter]
     public string DeviceClass { get; set; }
@@ -59,9 +59,9 @@ else
 
     #region Private fields
 
-    private IDevice Device = null;
+    private Device Device = null;
     private bool DeviceReady = false;
-    private IDisposable unsubscriber;
+    private IDisposable Unsubscriber;
 
     private string ModelNumber;
     private string SerialNumber;
@@ -87,8 +87,8 @@ else
                 case nameof( NECProjector ):
                     if ( IpAddress is not null )
                     {
-                        Device = new NECProjector( IpAddress, Port );
-                        this.unsubscriber = Device.Subscribe(this);
+                        Device = new NECProjector( DeviceName, IpAddress, Port );
+                        this.Unsubscriber = Device.Subscribe(this);
                         await TryInitializeDevice();
                     }
                     break;
@@ -117,10 +117,7 @@ else
             IDisplay id = Device as IDisplay;
             await id.PowerOn();
         }
-        catch ( Exception ex )
-        {
-            //OnError(ex);
-        }
+        catch { }
     }
 
     private async Task DisplayPowerOff()
@@ -130,10 +127,7 @@ else
             IDisplay id = Device as IDisplay;
             await id.PowerOff();
         }
-        catch ( Exception ex )
-        {
-            //OnError(ex);
-        }
+        catch { }
     }
 
     private async Task DisplaySelectInput( string input )
@@ -143,10 +137,7 @@ else
             IDisplay id = Device as IDisplay;
             await id.PowerOnSelectInput( input );
         }
-        catch ( Exception ex )
-        {
-            //OnError(ex);
-        }
+        catch { }
     }
 
     private async Task DisplayMute( bool muted )
@@ -156,10 +147,7 @@ else
             IDisplayMutable idm = Device as IDisplayMutable;
             await idm.DisplayMute( muted );
         }
-        catch ( Exception ex )
-        {
-            //OnError(ex);
-        }
+        catch { }
     }
 
     #endregion
@@ -169,12 +157,12 @@ else
     public void Subscribe( IObservable<DeviceStatus> observable )
     {
         if ( observable != null )
-            unsubscriber = observable.Subscribe( this );
+            Unsubscriber = observable.Subscribe( this );
     }
 
     public void Unsubscribe()
     {
-        unsubscriber.Dispose();
+        Unsubscriber.Dispose();
     }
 
     /// <summary>

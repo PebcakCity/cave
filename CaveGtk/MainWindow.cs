@@ -5,6 +5,7 @@ using NLog;
 
 using Cave.DeviceControllers;
 using Cave.DeviceControllers.Projectors.NEC;
+using System.Threading.Tasks;
 
 /*
 Where to go from here with the GTK app:
@@ -40,10 +41,9 @@ namespace CaveGtk
         [UI] private Button _btnOff = null;
         [UI] private TextView _textView = null;
 
-        private IDisposable unsubscriber;
-
-        private IDisplay display;
-        private readonly Logger logger = LogManager.GetCurrentClassLogger();
+        private IDisposable Unsubscriber;
+        private IDisplay DisplayDevice;
+        private readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
         public MainWindow() : this( new Builder( "MainWindow.glade" ) ) { }
 
@@ -61,12 +61,14 @@ namespace CaveGtk
             try
             {
                 string ip = Environment.GetEnvironmentVariable("NECTESTIP");
-                display = new NECProjector( ip );
-                Subscribe( display );
+                DisplayDevice = new NECProjector( "Test projector", ip );
+                Cave.DeviceControllers.Device device = ( Cave.DeviceControllers.Device )DisplayDevice;
+                Subscribe( device );
+                Task.Run(async () => { await device.Initialize(); });
             }
             catch ( Exception ex )
             {
-                logger.Error( ex.Message );
+                Logger.Error( ex.Message );
             }
         }
 
@@ -78,25 +80,25 @@ namespace CaveGtk
         public void Subscribe( IObservable<DeviceStatus> observable )
         {
             if ( observable != null )
-                unsubscriber = observable.Subscribe( this );
+                Unsubscriber = observable.Subscribe( this );
         }
         
         public void Unsubscribe()
         {
-            unsubscriber?.Dispose();
+            Unsubscriber?.Dispose();
         }
 
         public void OnNext( DeviceStatus status )
         {
             var message = "";
 
-            //message += status.PowerState ?? "";
-            //message += string.Format($"Display power: {status.PowerState?.ToString()}");
             message += "Display power: " + status.PowerState?.ToString() ?? "n/a";
             message += Environment.NewLine + "Input selected: " + status.InputSelected?.ToString() ?? "n/a";
             message += Environment.NewLine + "Video mute: " + status.VideoMuted ?? "n/a";
             message += Environment.NewLine + "Audio mute: " + status.AudioMuted ?? "n/a";
-            message += status.MessageType.ToString() ?? "Info" + status.Message ?? "";
+            message += Environment.NewLine;
+            message += status.MessageType.ToString() ?? "Info";
+            message += ": " + status.Message ?? "";
             DisplayMessage( message );
         }
 
@@ -110,16 +112,16 @@ namespace CaveGtk
             this.Unsubscribe();
         }
 
-        private void Btn1Clicked(object sender, EventArgs a) { }
-        private void Btn2Clicked(object sender, EventArgs a) { }
-        private void Btn3Clicked(object sender, EventArgs a) { }
-        private void Btn4Clicked(object sender, EventArgs a) { }
+        private void Btn1Clicked(object sender, EventArgs a) { DisplayDevice?.PowerOnSelectInput("RGB1"); }
+        private void Btn2Clicked(object sender, EventArgs a) { DisplayDevice?.PowerOnSelectInput("RGB2"); }
+        private void Btn3Clicked(object sender, EventArgs a) { DisplayDevice?.PowerOnSelectInput("HDMI1"); }
+        private void Btn4Clicked(object sender, EventArgs a) { DisplayDevice?.PowerOnSelectInput("Video"); }
         private void Btn5Clicked(object sender, EventArgs a) { }
         private void Btn6Clicked(object sender, EventArgs a) { }
         private void Btn7Clicked(object sender, EventArgs a) { }
         private void Btn8Clicked(object sender, EventArgs a) { }
-        private void BtnOnClicked(object sender, EventArgs a) { display?.PowerOn(); }
-        private void BtnOffClicked(object sender, EventArgs a) { display?.PowerOff(); }
+        private void BtnOnClicked(object sender, EventArgs a) { DisplayDevice?.PowerOn(); }
+        private void BtnOffClicked(object sender, EventArgs a) { DisplayDevice?.PowerOff(); }
 
         private void DisplayMessage( string message )
         {

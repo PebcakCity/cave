@@ -18,11 +18,14 @@
     {
         <button class="btn btn-success" @onclick="@DisplayPowerOn">Power On</button>
         <button class="btn btn-danger" @onclick="@DisplayPowerOff">Power Off</button>
-        <button class="btn btn-primary" @onclick="@(() => DisplaySelectInput("RGB1"))">RGB1</button>
-        <button class="btn btn-primary" @onclick="@(() => DisplaySelectInput("HDMI1"))">HDMI1</button>
+        if ( display is IInputSelectable iis )
+        {
+            <button class="btn btn-primary" @onclick="@(() => DisplaySelectInput("RGB1"))">RGB1</button>
+            <button class="btn btn-primary" @onclick="@(() => DisplaySelectInput("HDMI1"))">HDMI1</button>
+        }
         if ( display is IDisplayMutable idm )
         {
-            <button class="@(VideoMuted ? "btn btn-secondary" : "btn btn-primary")" @onclick="@(() => DisplayMute(!VideoMuted))">
+            <button class="@(DisplayMuted ? "btn btn-secondary" : "btn btn-primary")" @onclick="@(() => DisplayMute(!DisplayMuted))">
                 Display mute on/off
             </button>
 
@@ -48,23 +51,23 @@ else
 @code {
     #nullable disable
 
-        #region Public fields / parameters
+    #region Public fields / parameters
 
-        [Parameter]
-        public string IpAddress { get; set; }
+    [Parameter]
+    public string IpAddress { get; set; }
 
-        [Parameter]
-        public int Port { get; set; }
+    [Parameter]
+    public int Port { get; set; }
 
-        [Parameter]
-        public string DeviceName { get; set; } = "Device";
+    [Parameter]
+    public string DeviceName { get; set; } = "Device";
 
-        [Parameter]
-        public string DeviceClass { get; set; }
+    [Parameter]
+    public string DeviceClass { get; set; }
 
     #endregion
 
-        #region Private fields
+    #region Private fields
 
     private Device Device = null;
     private bool DeviceReady = false;
@@ -74,7 +77,7 @@ else
     private string SerialNumber;
 
     private string LastInputSelected;
-    private bool VideoMuted;
+    private bool DisplayMuted;
     private bool AudioMuted;
 
     private int? LampHoursTotal;
@@ -122,7 +125,7 @@ else
         try
         {
             IDisplay id = Device as IDisplay;
-            await id.PowerOn();
+            await id.DisplayOn();
         }
         catch { }
     }
@@ -132,7 +135,7 @@ else
         try
         {
             IDisplay id = Device as IDisplay;
-            await id.PowerOff();
+            await id.DisplayOff();
         }
         catch { }
     }
@@ -141,8 +144,13 @@ else
     {
         try
         {
-            IDisplay id = Device as IDisplay;
-            await id.PowerOnSelectInput( input );
+            if (Device is Projector pj)
+                await pj.PowerOnSelectInput(input);
+            else
+            {
+                IInputSelectable iis = Device as IInputSelectable;
+                await iis.SelectInput(input);
+            }
         }
         catch { }
     }
@@ -215,7 +223,7 @@ else
                 : "n/a";
 
         this.LastInputSelected = status.InputSelected?.ToString();
-        this.VideoMuted = status.VideoMuted;
+        this.DisplayMuted = status.DisplayMuted;
         this.AudioMuted = status.AudioMuted;
 
         if ( status.Message != null )

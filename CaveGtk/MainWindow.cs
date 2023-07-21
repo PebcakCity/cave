@@ -6,6 +6,7 @@ using NLog;
 using Cave.DeviceControllers;
 using Cave.DeviceControllers.Projectors.NEC;
 using System.Threading.Tasks;
+using Cave.DeviceControllers.Projectors;
 
 /*
 Where to go from here with the GTK app:
@@ -42,7 +43,7 @@ namespace CaveGtk
         [UI] private TextView _textView = null;
 
         private IDisposable Unsubscriber;
-        private IDisplay DisplayDevice;
+        private Projector Projector;
         private readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
         public MainWindow() : this( new Builder( "MainWindow.glade" ) ) { }
@@ -61,10 +62,9 @@ namespace CaveGtk
             try
             {
                 string ip = Environment.GetEnvironmentVariable("NECTESTIP");
-                DisplayDevice = new NECProjector( "Test projector", ip );
-                Cave.DeviceControllers.Device device = ( Cave.DeviceControllers.Device )DisplayDevice;
-                Subscribe( device );
-                Task.Run(async () => { await device.Initialize(); });
+                Projector = new NECProjector( "Test projector", ip );
+                Subscribe( Projector );
+                Task.Run(Projector.Initialize);
             }
             catch ( Exception ex )
             {
@@ -94,7 +94,7 @@ namespace CaveGtk
 
             message += "Display power: " + status.PowerState?.ToString() ?? "n/a";
             message += Environment.NewLine + "Input selected: " + status.InputSelected?.ToString() ?? "n/a";
-            message += Environment.NewLine + "Video mute: " + status.VideoMuted ?? "n/a";
+            message += Environment.NewLine + "Video mute: " + status.DisplayMuted ?? "n/a";
             message += Environment.NewLine + "Audio mute: " + status.AudioMuted ?? "n/a";
             message += Environment.NewLine;
             message += status.MessageType.ToString() ?? "Info";
@@ -112,16 +112,16 @@ namespace CaveGtk
             this.Unsubscribe();
         }
 
-        private void Btn1Clicked(object sender, EventArgs a) { DisplayDevice?.PowerOnSelectInput("RGB1"); }
-        private void Btn2Clicked(object sender, EventArgs a) { DisplayDevice?.PowerOnSelectInput("RGB2"); }
-        private void Btn3Clicked(object sender, EventArgs a) { DisplayDevice?.PowerOnSelectInput("HDMI1"); }
-        private void Btn4Clicked(object sender, EventArgs a) { DisplayDevice?.PowerOnSelectInput("Video"); }
+        private void Btn1Clicked(object sender, EventArgs a) { Projector?.PowerOnSelectInput("RGB1"); }
+        private void Btn2Clicked(object sender, EventArgs a) { Projector?.PowerOnSelectInput("RGB2"); }
+        private void Btn3Clicked(object sender, EventArgs a) { Projector?.PowerOnSelectInput("HDMI1"); }
+        private void Btn4Clicked(object sender, EventArgs a) { Projector?.PowerOnSelectInput("Video"); }
         private void Btn5Clicked(object sender, EventArgs a) { }
         private void Btn6Clicked(object sender, EventArgs a) { }
         private void Btn7Clicked(object sender, EventArgs a) { }
         private void Btn8Clicked(object sender, EventArgs a) { }
-        private void BtnOnClicked(object sender, EventArgs a) { DisplayDevice?.PowerOn(); }
-        private void BtnOffClicked(object sender, EventArgs a) { DisplayDevice?.PowerOff(); }
+        private void BtnOnClicked(object sender, EventArgs a) { Projector?.DisplayOn(); }
+        private void BtnOffClicked(object sender, EventArgs a) { Projector?.DisplayOff(); }
 
         private void DisplayMessage( string message )
         {

@@ -14,7 +14,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         private PowerState? PowerState;
         private Input? InputSelected;
         private bool AudioMuted;
-        private bool VideoMuted;
+        private bool DisplayMuted;
         private int LampHoursTotal;
         private int LampHoursUsed;
         private string? ModelNumber;
@@ -95,7 +95,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 this.PowerState = Enumeration.FromValue<PowerState>(response.Data[6]);
                 var inputTuple = (response.Data[8], response.Data[9]);
                 this.InputSelected = InputStates.GetValueOrDefault(inputTuple);
-                this.VideoMuted = (response.Data[11] == 0x01);
+                this.DisplayMuted = (response.Data[11] == 0x01);
                 this.AudioMuted = (response.Data[12] == 0x01);
                 // Get lamp hours if device has a lamp
                 await this.GetLampInfo(LampInfo.UsageTimeSeconds);
@@ -127,7 +127,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                     {
                         PowerState = this.PowerState,
                         InputSelected = this.InputSelected,
-                        VideoMuted = this.VideoMuted,
+                        DisplayMuted = this.DisplayMuted,
                         AudioMuted = this.AudioMuted,
                         LampHoursUsed = this.LampHoursUsed,
                         Message = message,
@@ -309,13 +309,13 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         }
 
-        public override async Task PowerOn()
+        public override async Task DisplayOn()
         {
             try
             {
-                var response = await Client!.SendCommandAsync(Command.PowerOn);
-                if ( response.IndicatesFailure )
-                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
+                var cts = new CancellationTokenSource();
+                cts.CancelAfter(120000);
+                await AwaitPowerOn(cts.Token);
             }
             catch ( Exception ex )
             {
@@ -326,7 +326,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         }
 
 
-        public override async Task PowerOff()
+        public override async Task DisplayOff()
         {
             try
             {
@@ -495,7 +495,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 if ( response.IndicatesFailure )
                     throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
                 
-                this.VideoMuted = muted;
+                this.DisplayMuted = muted;
                 NotifyObservers(string.Format("Video mute {0}", (muted?"ON":"OFF")));
             }
             catch ( Exception ex )
@@ -514,7 +514,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 if ( response.IndicatesFailure )
                     throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
 
-                return this.VideoMuted;
+                return this.DisplayMuted;
             }
             catch ( Exception ex )
             {

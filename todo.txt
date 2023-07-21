@@ -1,0 +1,199 @@
+
+1. Figure out how PJLink inputs are going to fit into the Enumeration type.
+They are ASCII two-char codes.  They can't easily fit the int Id, string Name
+pattern.  They will need a useless ID, and a separate Code byte[] or string.
+Similar to Command.
+Ex.: Let Input.Id be 11, Input.Code returns either (string) '11' or (byte array)
+[0x31, 0x31].
+UPDATE: This is probably the best/only option.  I tried to figure out how to
+make my own generic Enumeration class where the "Id" field could be an array
+or list but was unable to figure it out.  Even the SmartEnum Nuget class is
+restricted to value types or strings.  I may decide to go ahead and switch to
+SmartEnum at some point anyway for speed reasons and string enum support..
+
+--
+
+2. Figure out a data structure for storing multiple devices and a set of
+"inputs" or instruction sequences that will cause different inputs to be
+selected on multiple devices. Eg. To use a laptop, select input RGB 1 on the
+projector and input 2 on the switcher.  To use the Apple TV, just select
+input HDMI 1 on the projector.  These buttons are what we would ideally like
+to be able to display on some sort of "Home screen", along with buttons for
+system on / system off.  I just need to figure out the cleanest way to handle it.
+The biggest issue I see is that it essentially boils down to a dictionary of
+dictionaries.  Or dictionary of list of dictionaries.  Or something.
+Bottom line is it's nasty.  This is the point where the design gets a little
+frustrating.
+
+It seems like this is the point in all my attempts at this app where I hit a design
+wall.  I'd like to find an elegant solution to this problem for once.  This is at 
+least my third iteration at this.  How do we associate this set of input switches
+that need to occur on multiple devices with a single button on a home screen?  This
+has to be the single most useful feature of this application and if it doesn't work
+right, what's the point of the rest of the app?  This is what you typically see on a
+fancy vendor-installed control system from Crestron, etc.
+
+Assume we have a switcher in the cabinet connected by a relay & two cables
+plugged into it, one for the desktop PC and one for faculty laptops, plus an
+Apple TV mounted on the ceiling and plugged directly into the projector's HDMI
+port.  (Yes, this classroom's wiring is old and janky as shit, much like most
+of our classrooms.  New classrooms all get HDMI wiring these days, but a lot of
+our departments are still stuck with old VGA cabling but they want the new toys.
+They are buying bandaids like cheap VGA KVMs and wanting my department to add
+Apple TVs to their classrooms using them... dongle life.  Sometimes it's easier
+to mount it directly above the projector and tell them to just use the remote to
+switch inputs.  But I digress...)
+
+Sources : { 
+    "PC": [
+        "Projector": "RGB1",
+        "AV switcher": "Input1"
+    ],
+    "Laptop": [
+        "Projector": "RGB1",
+        "AV switcher": "Input2"
+    ],
+    "Apple TV": [
+        "Projector": "HDMI1"
+    ]
+}
+
+Dictionary<string, List<KeyValuePair<string, string>>>
+
+Devices : {
+    "Projector" -> {Projector instance},
+    "AV switcher" -> {Switcher instance}
+}
+
+Dictionary<string, Device>
+
+So we need a data structure to keep all this data in that can be queried at
+time of a click event on a button.  We read all the config data in and make it
+available to all components (singleton service?) or just the HomePage component?
+
+In the HomePage component, we use @foreach to create buttons with text matching
+their source names and their @onclick is set to "@(() => SelectSource({text}))"
+
+SelectSource uses the button text to index into the Sources collection to get
+the list of KeyValuePairs, and then for each KeyValuePair in the List, we
+use the Key to index into the Devices collection to retrieve the actual Device
+instance, then check its interface and call the appropriate method to select input.
+
+Device GetDevice(string deviceName)
+{
+    Device device;
+    if ( deviceName != null )
+        device = Devices.GetValueOrDefault(deviceName);
+    return device;
+}
+
+async Task SelectSource(string sourceName)
+{
+    try
+    {
+        var deviceInputList = Sources.GetValueOrDefault(sourceName);
+        foreach ( var deviceInput in deviceInputList )
+        {
+            Device device = GetDevice(deviceInput.Key);
+            if ( device is IDisplayInputSelectable idis )
+                await idis.PowerOnSelectInput(deviceInput.Value);
+            else if ( device is IInputSelectable iis )
+                await iis.SelectInput(deviceInput.Value);
+                
+            if ( device is IDisplayMutable idm )
+                idm.DisplayMute(false);
+        }
+    }
+    catch ( Exception ex )
+    {
+        throw;
+    }
+}
+
+--
+
+3. I may want to change Projector.InputsAvailable and its matching
+field in Television to be a Dictionary<string,string>.  This would allow a button
+to receive a "friendly name" to display, while the other string is the actual
+enumeration member name that corresponds to the input.  If I get the HomePage
+component worked out, then this might not be a big deal.  I had originally planned
+to have the "friendly names" appear on the HomePage like "Apple TV", etc.
+The DeviceController page was just going to show the actual input name.
+But it's all the same I suppose.  Maybe it wouldn't hurt to have the option?
+
+Side note: It might be useful to have a boolean flag for whether a device gets
+its own dedicated control page or not?  That's something to think about later.
+
+...
+
+99. Create the config file format and reader class for it.
+
+100. Continue working on Blazor app UI
+
+101. Happy coding.
+
+-------------------------------
+
+Things I'm trying to figure out:
+
+With the Blazor server app, how can we pass a list (or dictionary) of input
+names to a DeviceController component?  There are several ways to pass data from
+one component to another:
+Route parameters, query strings, component parameters, state containers...
+The best fit is probably to use a mix of component parameters and a singleton
+service that contains the whole configuration.  Config would get loaded and be
+available to the HomePage so it would have a reference to each Device for
+SelectSource to use.
+
+Component parameters:
+
+[Index page]
+
+@for( int i = 0; i < DeviceList.Count; i++ )
+{
+    <DeviceController Device="@DeviceList[i]"/>
+}
+
+@code
+{
+    // get list of devices
+    List<Device> DeviceList = ...
+}
+
+[DeviceController page]
+
+@code
+{
+    [Parameter]
+    public Device Device { get; set; }
+}
+
+-----
+
+Singleton Service
+
+[Program.cs]
+
+builder.Services.AddSingleton<AppConfig>();
+
+[Shared/AppConfig.cs]
+
+public class AppConfig
+{
+    public string RoomName {get; protected set;}
+    public Dictionary<string, Device> Devices {get; protected set;}
+    public Dictionary<string, List<KeyValuePair>>> Sources {get; protected set;}
+    //...
+}
+
+[Component]
+@inject AppConfig appConfig;
+
+...
+
+-----------------------------------------------
+
+Other things to do / things to work on for fun:
+
+- Read up on various things: generics, delegates, etc
+

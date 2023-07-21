@@ -1,12 +1,9 @@
 ﻿namespace Cave.DeviceControllers
 {
     public interface IDisplay
-        //: IDevice
     {
-        Task PowerOn();
-        Task PowerOff();
-        Task SelectInput( object input );
-        Task PowerOnSelectInput( object input );
+        Task DisplayOn();
+        Task DisplayOff();
     }
     
     public interface IDisplayMutable : IDisplay

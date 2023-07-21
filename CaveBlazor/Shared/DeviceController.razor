@@ -14,15 +14,16 @@
 
     <p>Device ready</p>
 
+    if ( Device is IInputSelectable iis )
+    {
+        <button class="btn btn-primary" @onclick="@(() => SelectInput("RGB1"))">RGB1</button>
+        <button class="btn btn-primary" @onclick="@(() => SelectInput("HDMI1"))">HDMI1</button>
+    }
+
     if ( Device is IDisplay display )
     {
         <button class="btn btn-success" @onclick="@DisplayPowerOn">Power On</button>
         <button class="btn btn-danger" @onclick="@DisplayPowerOff">Power Off</button>
-        if ( display is IInputSelectable iis )
-        {
-            <button class="btn btn-primary" @onclick="@(() => DisplaySelectInput("RGB1"))">RGB1</button>
-            <button class="btn btn-primary" @onclick="@(() => DisplaySelectInput("HDMI1"))">HDMI1</button>
-        }
         if ( display is IDisplayMutable idm )
         {
             <button class="@(DisplayMuted ? "btn btn-secondary" : "btn btn-primary")" @onclick="@(() => DisplayMute(!DisplayMuted))">
@@ -140,12 +141,12 @@ else
         catch { }
     }
 
-    private async Task DisplaySelectInput( string input )
+    private async Task SelectInput( string input )
     {
         try
         {
-            if (Device is Projector pj)
-                await pj.PowerOnSelectInput(input);
+            if (Device is IDisplayInputSelectable idis)
+                await idis.PowerOnSelectInput(input);
             else
             {
                 IInputSelectable iis = Device as IInputSelectable;

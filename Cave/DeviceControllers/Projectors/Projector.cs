@@ -19,8 +19,8 @@ namespace Cave.DeviceControllers.Projectors
         public virtual Task<bool> IsDisplayMuted() { throw new NotImplementedException(); }
 
         /* Projector */
-        public virtual Task<Enumeration?> GetPowerState() { throw new NotImplementedException(); }
-        public virtual Task<Enumeration?> GetInputSelection() { throw new NotImplementedException(); }
+        public virtual Task<object?> GetPowerState() { throw new NotImplementedException(); }
+        public virtual Task<object?> GetInputSelection() { throw new NotImplementedException(); }
 
         protected Projector( string deviceName, string address, int port )
             : base(deviceName)

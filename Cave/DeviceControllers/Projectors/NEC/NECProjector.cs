@@ -92,7 +92,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
             try
             {
                 var response = await Client!.SendCommandAsync(Command.GetStatus);
-                this.PowerState = Enumeration.FromValue<PowerState>(response.Data[6]);
+                //this.PowerState = Enumeration.FromValue<PowerState>(response.Data[6]);
+                this.PowerState = PowerState.FromValue(response.Data[6]);
                 var inputTuple = (response.Data[8], response.Data[9]);
                 this.InputSelected = InputStates.GetValueOrDefault(inputTuple);
                 this.DisplayMuted = (response.Data[11] == 0x01);
@@ -267,7 +268,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                     if ( cancellationToken.IsCancellationRequested )
                         throw new OperationCanceledException("PowerOn operation timed out.");
 
-                    var state = await GetPowerState();
+                    var state = await GetPowerState() as PowerState;
 
                     if ( state is null )
                         throw new InvalidOperationException("Failed to read device state.  Please notify IT.");
@@ -342,7 +343,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         }
 
-        public override async Task<Enumeration?> GetPowerState()
+        public override async Task<object?> GetPowerState()
         {
             try
             {
@@ -369,7 +370,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 if ( obj is Input i )
                     input = i;
                 else if ( obj is string s )
-                    input = Enumeration.FromName<Input>(s);
+                    input = Input.FromName(s);
                 else
                     throw new ArgumentException($"Invalid argument type {obj.GetType()}");
 
@@ -389,7 +390,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         }
 
-        public override async Task<Enumeration?> GetInputSelection()
+        public override async Task<object?> GetInputSelection()
         {
             try
             {

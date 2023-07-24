@@ -13,8 +13,8 @@ namespace Cave.DeviceControllers
         public string? SerialNumber { get; set; }
         public int? LampHoursTotal { get; set; }
         public int? LampHoursUsed { get; set; }
-        public Enumeration? PowerState { get; set; }
-        public Enumeration? InputSelected { get; set; }
+        public object? PowerState { get; set; }
+        public object? InputSelected { get; set; }
         public bool DisplayMuted { get; set; }
         public bool AudioMuted { get; set; }
         public string? Message { get; set; }

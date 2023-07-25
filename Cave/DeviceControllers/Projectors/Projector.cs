@@ -2,7 +2,7 @@ using Cave.Utils;
 
 namespace Cave.DeviceControllers.Projectors
 {
-    public abstract class Projector : Device, IDisplayInputSelectable, IDisplayMutable
+    public abstract class Projector : Device, IDisplayInputSelectable, IDisplayMutable, IAudio
     {
         /* IDisplay */
         public virtual Task DisplayOn() { throw new NotImplementedException(); }
@@ -17,6 +17,12 @@ namespace Cave.DeviceControllers.Projectors
         /* IDisplayMutable */
         public virtual Task DisplayMute( bool muted ) { throw new NotImplementedException(); }
         public virtual Task<bool> IsDisplayMuted() { throw new NotImplementedException(); }
+
+        /* IAudio */
+        public virtual Task VolumeUp() { throw new NotImplementedException(); }
+        public virtual Task VolumeDown() { throw new NotImplementedException(); }
+        public virtual Task AudioMute(bool muted) { throw new NotImplementedException(); }
+        public virtual Task<bool> IsAudioMuted() { throw new NotImplementedException(); }
 
         /* Projector */
         public virtual Task<object?> GetPowerState() { throw new NotImplementedException(); }

@@ -6,7 +6,7 @@ using Cave.Utils;
 
 namespace Cave.DeviceControllers.Projectors.NEC
 {
-    public partial class NECProjector : Projector, IAudio
+    public partial class NECProjector : Projector
     {
 #region Private fields
         private Client? Client = null;
@@ -19,25 +19,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         private int LampHoursUsed;
         private string? ModelNumber;
         private string? SerialNumber;
-
-    #region IObservable    
         private List<IObserver<DeviceStatus>> Observers;
-        private class Unsubscriber: IDisposable
-        {
-            private List<IObserver<DeviceStatus>> observers;
-            private IObserver<DeviceStatus> observer;
-            public Unsubscriber(List<IObserver<DeviceStatus>> observers, IObserver<DeviceStatus> observer)
-            {
-                this.observers = observers;
-                this.observer = observer;
-            }
-            public void Dispose()
-            {
-                if( observer != null && observers.Contains(observer) )
-                    observers.Remove(observer);
-            }
-        }
-    #endregion
 #endregion
 
 #region Constructor
@@ -525,7 +507,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         }
 
-        public async Task VolumeUp()
+        public async override Task VolumeUp()
         {
             try
             {// relative adjustment, +1 volume unit
@@ -545,13 +527,20 @@ namespace Cave.DeviceControllers.Projectors.NEC
             //throw new NotImplementedException("This feature is currently unimplemented.");
         }
 
-        public async Task VolumeDown()
+        /// <summary>
+        /// Not really a high priority to get this one working right now.
+        /// I might just leave both volume controls unimplemented.
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NECProjectorCommandError"></exception>
+        public async override Task VolumeDown()
         {
             try
             {// relative adjustment, -1 volume unit
                 // tried both one's and two's complement, not sure how to get this to work,
                 // VolumeUp seems to work fine
                 // tried reversing 2nd and 3rd bytes
+                
                 var response = await Client!.SendCommandAsync(Command.VolumeAdjust.Prepare(0x01, unchecked((byte)~0x01), 0x00));
                 if ( response.IndicatesFailure )
                     throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
@@ -568,7 +557,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             //throw new NotImplementedException("This feature is currently unimplemented.");
         }
 
-        public async Task AudioMute( bool muted )
+        public async override Task AudioMute( bool muted )
         {
             try
             {
@@ -587,7 +576,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         }
 
-        public async Task<bool> IsAudioMuted()
+        public async override Task<bool> IsAudioMuted()
         {
             try
             {

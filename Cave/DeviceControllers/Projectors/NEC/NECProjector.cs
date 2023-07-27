@@ -189,7 +189,11 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         }
 
-        private async Task<List<NECProjectorError>> GetErrors( bool logErrors = true )
+#endregion
+
+#region Public methods
+
+        public async Task<List<NECProjectorError>> GetErrors( bool logErrors = true )
         {
             try
             {
@@ -210,9 +214,6 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         }
 
-#endregion
-
-#region Public methods
 
         public override IDisposable Subscribe( IObserver<DeviceStatus> observer )
         {
@@ -594,7 +595,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         }
 
-        #endregion
+#endregion
 
     }
 }

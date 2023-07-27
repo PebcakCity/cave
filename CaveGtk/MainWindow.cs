@@ -104,7 +104,19 @@ namespace CaveGtk
 
         public void OnError( Exception exception )
         {
-            DisplayMessage( exception.ToString() );
+            string errorText = "";
+            if ( exception is AggregateException ae )
+            {
+                errorText += ae.Message + Environment.NewLine;
+                foreach ( Exception e in ae.InnerExceptions )
+                {
+                    errorText += (e.Message) + Environment.NewLine;
+                }
+            }
+            else if ( exception is Exception e )
+            {
+                errorText += e.GetType() + " :: " + e.Message;
+            }
         }
 
         public void OnCompleted( )
@@ -119,7 +131,11 @@ namespace CaveGtk
         private void Btn5Clicked(object sender, EventArgs a) { }
         private void Btn6Clicked(object sender, EventArgs a) { }
         private void Btn7Clicked(object sender, EventArgs a) { }
-        private void Btn8Clicked(object sender, EventArgs a) { }
+        private void Btn8Clicked(object sender, EventArgs a) 
+        {
+            if ( Projector is NECProjector nec )
+                Task.Run(async () => await nec.GetErrors());
+        }
         private void BtnOnClicked(object sender, EventArgs a) { Projector?.DisplayOn(); }
         private void BtnOffClicked(object sender, EventArgs a) { Projector?.DisplayOff(); }
 

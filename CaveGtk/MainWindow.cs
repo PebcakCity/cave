@@ -61,7 +61,8 @@ namespace CaveGtk
         {
             try
             {
-                string ip = Environment.GetEnvironmentVariable("NECTESTIP");
+                //string ip = Environment.GetEnvironmentVariable("NECTESTIP");
+                string ip = "161.31.50.153";
                 Projector = new NECProjector( "Test projector", ip );
                 Subscribe( Projector );
                 Task.Run(Projector.Initialize);

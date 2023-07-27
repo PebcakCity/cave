@@ -9,7 +9,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CaveBlazor", "CaveBlazor\Ca
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CaveGtk", "CaveGtk\CaveGtk.csproj", "{59C5B8E2-4AD3-4377-9170-7A572D69DC01}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CaveTests", "CaveTests\CaveTests.csproj", "{499B5861-B8D0-4DB1-A8A0-C9B9DAC84744}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CaveTests", "CaveTests\CaveTests.csproj", "{499B5861-B8D0-4DB1-A8A0-C9B9DAC84744}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{E5D86EE2-BC06-466C-8BC9-E39F2E237FCD}"
+	ProjectSection(SolutionItems) = preProject
+		todo.txt = todo.txt
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

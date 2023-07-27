@@ -5,11 +5,9 @@ pattern.  They will need a useless ID, and a separate Code byte[] or string.
 Similar to Command.
 Ex.: Let Input.Id be 11, Input.Code returns either (string) '11' or (byte array)
 [0x31, 0x31].
-UPDATE: This is probably the best/only option.  I tried to figure out how to
-make my own generic Enumeration class where the "Id" field could be an array
-or list but was unable to figure it out.  Even the SmartEnum Nuget class is
-restricted to value types or strings.  I may decide to go ahead and switch to
-SmartEnum at some point anyway for speed reasons and string enum support..
+UPDATE: This is probably the best/only option.
+DONE, switched to SmartEnum.  Inputs will be similar to Command, having a
+Data byte[]
 
 --
 
@@ -131,6 +129,31 @@ its own dedicated control page or not?  That's something to think about later.
 100. Continue working on Blazor app UI
 
 101. Happy coding.
+
+------------------------------------------
+
+Changes I'm considering in the near future:
+
+1. Should Device have a DeviceStatus field Device.Status?  Will this make
+the various Device subclasses (and CaveBlazor.DeviceController) cleaner?
+Storing all those fields in a single place?  We still create a new DeviceStatus
+instance in NECProjector.Initialize and NotifyObservers so not much really
+changes there.  We would just immediately assign that DeviceStatus instance
+to a single field and access all the data inside it through that field going
+forward.  What would the visibility be from DeviceController?  Would it be able
+to modify those fields/properties and would it matter?  Maybe we make them
+get/init only?  But then the Device itself can't write to it either.
+So for example NECProjector.SelectInput would not be able to say something
+like "this.Status.InputSelected = input" after selecting an input and before
+calling NotifyObservers.  NotifyObservers creates a new DeviceStatus wrapping
+all those fields, is there a way to ensure that if DeviceController writes
+to a field, it doesn't modify the value stored in the Device.Status instance?
+Sounds like DeviceStatus should likely be a struct and not a class so it's
+always copied and passed by value?
+
+2. Thinking about whether I should break DeviceController into multiple
+subclasses for dealing with different device types... DisplayController,
+AudioController, etc.
 
 -------------------------------
 

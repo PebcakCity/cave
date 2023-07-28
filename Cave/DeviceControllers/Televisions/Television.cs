@@ -7,10 +7,10 @@ namespace Cave.DeviceControllers.Televisions
         public virtual Task DisplayOff() { throw new NotImplementedException(); }
 
         /* IInputSelectable */
-        public virtual Task SelectInput( object input ) { throw new NotImplementedException(); }
+        public virtual Task SelectInput( object obj ) { throw new NotImplementedException(); }
 
         /* IDisplayInputSelectable */
-        public virtual Task PowerOnSelectInput( object input ) { throw new NotImplementedException(); }
+        public virtual Task PowerOnSelectInput( object obj ) { throw new NotImplementedException(); }
 
         /* IAudio */
         public virtual Task VolumeUp() { throw new NotImplementedException(); }
@@ -19,6 +19,15 @@ namespace Cave.DeviceControllers.Televisions
         public virtual Task<bool> IsAudioMuted() { throw new NotImplementedException(); }
 
         /* Television */
+        public virtual Task Play() { throw new NotImplementedException(); }
+        public virtual Task Reverse() { throw new NotImplementedException(); }
+        public virtual Task FastForward() { throw new NotImplementedException(); }
+        public virtual Task ChannelUp() { throw new NotImplementedException(); }
+        public virtual Task ChannelDown() { throw new NotImplementedException(); }
+        public virtual Task ArrowUp() { throw new NotImplementedException(); }
+        public virtual Task ArrowDown() { throw new NotImplementedException(); }
+        public virtual Task ArrowLeft() { throw new NotImplementedException(); }
+        public virtual Task ArrowRight() { throw new NotImplementedException(); }
         protected Television(string deviceName, string address, int port) : base(deviceName)
         {
             this.Address = address;

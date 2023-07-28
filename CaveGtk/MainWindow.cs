@@ -142,7 +142,6 @@ namespace CaveGtk
                 else
                     DisplayMessage("No errors reported");
             }
-                //Task.Run(async () => await nec.GetErrors());
         }
         private void BtnOnClicked(object sender, EventArgs a) { Projector?.DisplayOn(); }
         private void BtnOffClicked(object sender, EventArgs a) { Projector?.DisplayOff(); }

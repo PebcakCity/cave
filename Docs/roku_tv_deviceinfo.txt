@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<device-info>
+	<udn>296c001b-6009-1089-806c-d4abcd0ff4fd</udn>
+	<serial-number>YK00KH625004</serial-number>
+	<device-id>QXM06K625004</device-id>
+	<advertising-id>46d54740-dac4-5dc3-81f0-1af4f9692da8</advertising-id>
+	<vendor-name>Hisense</vendor-name>
+	<model-name>32H4030</model-name>
+	<model-number>8220X</model-number>
+	<model-region>US</model-region>
+	<is-tv>true</is-tv>
+	<is-stick>false</is-stick>
+	<screen-size>32</screen-size>
+	<panel-id>8</panel-id>
+	<mobile-has-live-tv>true</mobile-has-live-tv>
+	<ui-resolution>720p</ui-resolution>
+	<tuner-type>ATSC</tuner-type>
+	<supports-ethernet>false</supports-ethernet>
+	<wifi-mac>d4:ab:cd:0f:f4:fd</wifi-mac>
+	<wifi-driver>realtek</wifi-driver>
+	<has-wifi-extender>false</has-wifi-extender>
+	<has-wifi-5G-support>true</has-wifi-5G-support>
+	<can-use-wifi-extender>true</can-use-wifi-extender>
+	<network-type>wifi</network-type>
+	<network-name>Aristotle_0091BDE0</network-name>
+	<friendly-device-name>32&quot; Hisense Roku TV</friendly-device-name>
+	<friendly-model-name>Hisense•Roku TV</friendly-model-name>
+	<default-device-name>Hisense•Roku TV - YK00KH625004</default-device-name>
+	<user-device-name>32&quot; Hisense Roku TV</user-device-name>
+	<user-device-location>Bedroom</user-device-location>
+	<build-number>90D.00E04182A</build-number>
+	<software-version>12.0.0</software-version>
+	<software-build>4182</software-build>
+	<secure-device>true</secure-device>
+	<language>en</language>
+	<country>US</country>
+	<locale>en_US</locale>
+	<time-zone-auto>true</time-zone-auto>
+	<time-zone>US/Central</time-zone>
+	<time-zone-name>United States/Central</time-zone-name>
+	<time-zone-tz>America/Chicago</time-zone-tz>
+	<time-zone-offset>-300</time-zone-offset>
+	<clock-format>12-hour</clock-format>
+	<uptime>40258</uptime>
+	<power-mode>PowerOn</power-mode>
+	<supports-suspend>true</supports-suspend>
+	<supports-find-remote>false</supports-find-remote>
+	<supports-audio-guide>true</supports-audio-guide>
+	<supports-rva>true</supports-rva>
+	<has-hands-free-voice-remote>false</has-hands-free-voice-remote>
+	<developer-enabled>false</developer-enabled>
+	<keyed-developer-id/>
+	<search-enabled>true</search-enabled>
+	<search-channels-enabled>true</search-channels-enabled>
+	<voice-search-enabled>true</voice-search-enabled>
+	<notifications-enabled>false</notifications-enabled>
+	<notifications-first-use>true</notifications-first-use>
+	<supports-private-listening>true</supports-private-listening>
+	<supports-private-listening-dtv>true</supports-private-listening-dtv>
+	<supports-warm-standby>true</supports-warm-standby>
+	<headphones-connected>false</headphones-connected>
+	<supports-audio-settings>false</supports-audio-settings>
+	<supports-ecs-textedit>true</supports-ecs-textedit>
+	<supports-ecs-microphone>true</supports-ecs-microphone>
+	<supports-wake-on-wlan>true</supports-wake-on-wlan>
+	<supports-airplay>true</supports-airplay>
+	<has-play-on-roku>true</has-play-on-roku>
+	<has-mobile-screensaver>false</has-mobile-screensaver>
+	<support-url>hisense-usa.com/support</support-url>
+	<grandcentral-version>9.4.521</grandcentral-version>
+	<supports-trc>true</supports-trc>
+	<trc-version>3.0</trc-version>
+	<trc-channel-version>9.3.10</trc-channel-version>
+	<davinci-version>2.8.20</davinci-version>
+	<av-sync-calibration-enabled>3.0</av-sync-calibration-enabled>
+</device-info>

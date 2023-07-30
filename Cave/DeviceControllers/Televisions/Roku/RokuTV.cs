@@ -11,11 +11,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
     {
         private HttpClient? Client = null;
         private static readonly Logger Logger = LogManager.GetLogger("RokuTV");
-        private PowerState? PowerState;
-        private Input? InputSelected;
-        private bool AudioMuted;
-        private string? ModelNumber;
-        private string? SerialNumber;
+        private DeviceStatus Status;
         private List<IObserver<DeviceStatus>> Observers;
 
         public RokuTV(string deviceName, string address, int port=8060, List<string>? inputs = null)
@@ -47,7 +43,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
         /// For display testing application
         /// </summary>
         /// <returns>Combined response of /query/device-info and /query/media-player</returns>
-        public async Task<string> GetStatus()
+        public async Task GetStatus()
         {
             try
             {
@@ -59,20 +55,8 @@ namespace Cave.DeviceControllers.Televisions.Roku
                 cts.CancelAfter(5000);
                 var mediaPlayerInfo = await GetMediaPlayerInfo(cts.Token);
 
-                var status = deviceInfo + mediaPlayerInfo;
-
-                foreach ( var observer in this.Observers )
-                {
-                    observer.OnNext(new DeviceStatus
-                    {
-                        ModelNumber = this.ModelNumber,
-                        SerialNumber = this.SerialNumber,
-                        PowerState = this.PowerState,
-                        Message = status,
-                        MessageType = MessageType.Info
-                    });
-                }
-                return status;
+                var statusMessage = deviceInfo + mediaPlayerInfo;
+                NotifyObservers(statusMessage);
             }
             catch { throw; }
         }
@@ -113,13 +97,15 @@ namespace Cave.DeviceControllers.Televisions.Roku
                         switch ( reader.Name )
                         {
                             case "model-name":
-                                this.ModelNumber = reader.ReadElementContentAsString();
+                                Status.ModelNumber = reader.ReadElementContentAsString();
                                 break;
-                            case "serial_number":
-                                this.SerialNumber = reader.ReadElementContentAsString();
+                            case "serial-number":
+                                Status.SerialNumber = reader.ReadElementContentAsString();
                                 break;
                             case "power-mode":
-                                PowerState.TryFromName(reader.ReadElementContentAsString(), out this.PowerState);
+                                PowerState state;
+                                if ( PowerState.TryFromName(reader.ReadElementContentAsString(), out state) )
+                                    Status.PowerState = state;
                                 break;
                             case "friendly-device-name":
                                 this.Name = reader.ReadElementContentAsString();
@@ -139,11 +125,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
         {
             foreach ( var observer in this.Observers )
             {
-                observer.OnNext(new DeviceStatus
-                {
-                    PowerState = this.PowerState,
-                    InputSelected = this.InputSelected,
-                    // AudioMuted = this.AudioMuted, /* Won't be easy to track, not seeing this under device-info */
+                observer.OnNext(Status with { 
                     Message = message,
                     MessageType = type
                 });
@@ -189,7 +171,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             try
             {
                 await KeyPress("PowerOn");
-                this.PowerState = PowerState.PowerOn;
+                Status.PowerState = PowerState.PowerOn;
                 NotifyObservers("Power on", MessageType.Info);
             }
             catch ( Exception ex )
@@ -205,7 +187,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             try
             {
                 await KeyPress("PowerOff");
-                this.PowerState = PowerState.DisplayOff;
+                Status.PowerState = PowerState.DisplayOff;
                 NotifyObservers("Power off", MessageType.Info);
             }
             catch ( Exception ex )
@@ -229,7 +211,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
                     throw new ArgumentException($"Invalid argument type {obj.GetType()}");
 
                 await KeyPress(input);
-                this.InputSelected = input;
+                Status.InputSelected = input;
                 NotifyObservers($"Input '{input}' selected.", MessageType.Success);
             }
             catch ( Exception ex )
@@ -293,7 +275,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
                 await KeyPress("VolumeMute");
                 // Without the device reporting the state of audio muting,
                 // the best we can do is toggle the state on/off and hope it's right. 50/50
-                this.AudioMuted = !this.AudioMuted;
+                Status.AudioMuted = !Status.AudioMuted;
                 NotifyObservers();
             }
             catch ( Exception ex )

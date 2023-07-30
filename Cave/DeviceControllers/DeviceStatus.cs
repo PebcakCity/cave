@@ -7,7 +7,7 @@ namespace Cave.DeviceControllers
     /// any observer.  If a field is non-null, that should indicate that it's
     /// part of what updated.
     /// </summary>
-    public class DeviceStatus
+    public struct DeviceStatus
     {
         public string? ModelNumber { get; set; }
         public string? SerialNumber { get; set; }

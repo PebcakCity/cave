@@ -2,27 +2,15 @@ using System.Text;
 
 using NLog;
 
-using Cave.Utils;
-
 namespace Cave.DeviceControllers.Projectors.NEC
 {
     public partial class NECProjector : Projector
     {
-#region Private fields
         private Client? Client = null;
         private static readonly Logger Logger = LogManager.GetLogger("NECProjector");
-        private PowerState? PowerState;
-        private Input? InputSelected;
-        private bool AudioMuted;
-        private bool DisplayMuted;
-        private int LampHoursTotal;
-        private int LampHoursUsed;
-        private string? ModelNumber;
-        private string? SerialNumber;
+        private DeviceStatus Status;
         private List<IObserver<DeviceStatus>> Observers;
-#endregion
 
-#region Constructor
         public NECProjector(string deviceName, string address, int port=7142, List<string>? inputs = null)
             :base(deviceName, address, port)
         {
@@ -30,7 +18,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             this.Address = address;
             this.Port = port;
             this.Observers = new List<IObserver<DeviceStatus>>();
-            this.InputsAvailable = inputs ?? new List<string> { "RGB1", "HDMI1" };
+            this.InputsAvailable = inputs ?? new List<string> { nameof(Input.RGB1), nameof(Input.HDMI1) };
         }
 
         public override async Task Initialize()
@@ -40,20 +28,12 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 this.Client = await Client.Create(this, Address, Port);
                 
                 // Get model, serial #, and total lamp life & report back to observers
-                await this.GetModelNumber();
-                await this.GetSerialNumber();
-                await this.GetLampInfo(LampInfo.UsageTimeSeconds);
-                await this.GetLampInfo(LampInfo.GoodForSeconds);
-                foreach ( var observer in Observers )
-                {
-                    observer.OnNext(new DeviceStatus
-                    {
-                        ModelNumber = this.ModelNumber,
-                        SerialNumber = this.SerialNumber,
-                        LampHoursUsed = this.LampHoursUsed,
-                        LampHoursTotal = this.LampHoursTotal
-                    });
-                }
+                await GetModelNumber();
+                await GetSerialNumber();
+                await GetLampInfo(LampInfo.GoodForSeconds);
+                await GetLampInfo(LampInfo.UsageTimeSeconds);
+
+                NotifyObservers();
             }
             catch
             {
@@ -61,37 +41,65 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         }
 
-#endregion
-
-#region Private methods
 
         /// <summary>
-        /// Fetch current device status and store in several private fields
-        /// that will be referenced by NotifyObservers
+        /// Fetch current device status and notify observers of that status, 
+        /// optionally sending these observers a text string summarizing the
+        /// status and any errors currently being reported by the device.
         /// </summary>
-        private async Task<Response> GetStatus()
+        /// <param name="appWantsText">Whether the app is requesting text to
+        /// update a text view</param>
+        public async Task GetStatus(bool appWantsText = false)
         {
             try
             {
                 var response = await Client!.SendCommandAsync(Command.GetStatus);
-                //this.PowerState = Enumeration.FromValue<PowerState>(response.Data[6]);
-                this.PowerState = PowerState.FromValue(response.Data[6]);
+                if ( response.IndicatesFailure )
+                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
+
+                Status.PowerState = PowerState.FromValue(response.Data[6]);
                 var inputTuple = (response.Data[8], response.Data[9]);
-                this.InputSelected = InputStates.GetValueOrDefault(inputTuple);
-                this.DisplayMuted = (response.Data[11] == 0x01);
-                this.AudioMuted = (response.Data[12] == 0x01);
+                Status.InputSelected = InputStates.GetValueOrDefault(inputTuple);
+                Status.DisplayMuted = (response.Data[11] == 0x01);
+                Status.AudioMuted = (response.Data[12] == 0x01);
                 // Get lamp hours if device has a lamp
-                await this.GetLampInfo(LampInfo.UsageTimeSeconds);
+                await GetLampInfo(LampInfo.UsageTimeSeconds);
 
-                NotifyObservers();
-
-                return response;
+                if ( appWantsText )
+                    NotifyObservers(await GetStatusText());
+                else
+                    NotifyObservers();
             }
             catch ( Exception ex )
             {
                 Logger.Error($"NECProjector.{nameof(GetStatus)} :: {ex}");
                 throw;
             }
+        }
+
+        private async Task<string> GetStatusText()
+        {
+            string message = string.Empty;
+            message += $"Device name: {this.Name}\n"
+                + $"Power state: {Status.PowerState}\n"
+                + $"Input selected: {Status.InputSelected}\n";
+            message += "Video mute: " + ( ( Status.DisplayMuted==true ) ? "on" : "off" ) + "\n";
+            message += "Audio mute: " + ( ( Status.AudioMuted==true ) ? "on" : "off" ) + "\n";
+
+            if ( Status.LampHoursUsed > -1 && Status.LampHoursTotal > 0 )
+            {
+                int percentRemaining = 100 - (int)Math.Floor((double)Status.LampHoursUsed/(double)Status.LampHoursTotal);
+                message += $"Lamp hours used: {Status.LampHoursUsed} / {Status.LampHoursTotal} ({percentRemaining}% life remaining)\n";
+            }
+
+            var errors = await GetErrors();
+            if ( errors.Count > 0 )
+            {
+                message += "\nDevice is reporting the following error(s):\n";
+                foreach ( var error in errors )
+                    message += error.Message + "\n";
+            }
+            return message;
         }
 
         /// <summary>
@@ -102,26 +110,12 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// <param name="type">The type or severity level of the message to display</param>
         private void NotifyObservers(string? message = null, MessageType type = MessageType.Info)
         {
-            try
+            foreach ( var observer in this.Observers )
             {
-                foreach ( var observer in this.Observers )
-                {
-                    observer.OnNext(new DeviceStatus
-                    {
-                        PowerState = this.PowerState,
-                        InputSelected = this.InputSelected,
-                        DisplayMuted = this.DisplayMuted,
-                        AudioMuted = this.AudioMuted,
-                        LampHoursUsed = this.LampHoursUsed,
-                        Message = message,
-                        MessageType = type
-                    });
-                }
-            }
-            catch ( Exception ex )
-            {
-                Logger.Error($"NECProjector.{nameof(NotifyObservers)} :: {ex}");
-                throw;
+                observer.OnNext(Status with {
+                    Message = message,
+                    MessageType = type
+                });
             }
         }
 
@@ -137,17 +131,17 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 switch ( info )
                 {
                     case LampInfo.GoodForSeconds:
-                        this.LampHoursTotal = (int)Math.Floor((double)value/3600);
+                        Status.LampHoursTotal = (int)Math.Floor((double)value/3600);
                         break;
                     case LampInfo.UsageTimeSeconds:
-                        this.LampHoursUsed = (int)Math.Floor((double)value/3600);
+                        Status.LampHoursUsed = (int)Math.Floor((double)value/3600);
                         break;
                 }
                 return value;
             }
             catch( NECProjectorCommandError )
             {
-                LampHoursTotal = LampHoursUsed = -1;
+                Status.LampHoursTotal = Status.LampHoursUsed = -1;
                 return -1;
             }
             catch( Exception ex )
@@ -163,8 +157,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await Client!.SendCommandAsync(Command.GetModelNumber);
                 var data = response.Data[5..37];
-                this.ModelNumber = Encoding.UTF8.GetString(data).TrimEnd('\0');
-                return this.ModelNumber;
+                Status.ModelNumber = Encoding.UTF8.GetString(data).TrimEnd('\0');
+                return Status.ModelNumber;
             }
             catch ( Exception ex )
             {
@@ -179,8 +173,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await Client!.SendCommandAsync(Command.GetSerialNumber);
                 var data = response.Data[7..23];
-                this.SerialNumber = Encoding.UTF8.GetString(data).TrimEnd('\0');
-                return this.SerialNumber;
+                Status.SerialNumber = Encoding.UTF8.GetString(data).TrimEnd('\0');
+                return Status.SerialNumber;
             }
             catch ( Exception ex )
             {
@@ -189,9 +183,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         }
 
-#endregion
 
-#region Public methods
 
         public async Task<List<NECProjectorError>> GetErrors( bool logErrors = true )
         {
@@ -309,7 +301,6 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         }
 
-
         public override async Task DisplayOff()
         {
             try
@@ -330,11 +321,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
         {
             try
             {
-                var response = await GetStatus();
-                if ( response.IndicatesFailure )
-                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
-
-                return this.PowerState;
+                await GetStatus();
+                return Status.PowerState;
             }
             catch ( Exception ex )
             {
@@ -362,7 +350,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 if ( response.IndicatesFailure )
                     throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
 
-                this.InputSelected = input;
+                Status.InputSelected = input;
                 NotifyObservers($"Input '{input}' selected.", MessageType.Success);
             }
             catch ( Exception ex )
@@ -377,11 +365,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
         {
             try
             {
-                var response = await GetStatus();
-                if ( response.IndicatesFailure )
-                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
-
-                return this.InputSelected;
+                await GetStatus();
+                return Status.InputSelected;
             }
             catch ( Exception ex )
             {
@@ -390,67 +375,6 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 throw;
             }
         }
-
-        
-        //public override async Task PowerOnSelectInput( object input )
-        //{
-        //    bool deviceReady = false;
-        //    string? failureReason = null;
-
-        //    try
-        //    {
-        //        await PowerOn();
-        //        while ( !deviceReady && failureReason is null )
-        //        {
-        //            var state = await GetPowerState();
-
-        //            if ( state is null )
-        //                throw new InvalidOperationException("Failed to read device state.  Please notify IT.");
-
-        //            else if ( state == PowerState.On || state == PowerState.Warming )
-        //                deviceReady = true;
-
-        //            else if ( state == PowerState.Cooling )
-        //                failureReason = "Device is cooling.  Please wait until power cycle is complete.";
-
-        //            else if ( state == PowerState.StandbySleep ||
-        //                    state == PowerState.StandbyNetwork ||
-        //                    state == PowerState.StandbyPowerSaving )
-        //                failureReason = "Device in standby.  Please wait for power on before input selection.";
-
-        //            else if ( state == PowerState.StandbyError )
-        //            {
-        //                var errors = await GetErrors();
-        //                failureReason = "Device is reporting one or more errors.";
-        //                throw new AggregateException(failureReason, errors);
-        //            }
-
-        //            else if ( state == PowerState.Unknown )
-        //                failureReason = "Device is busy.  Please wait.";
-
-        //            // Device is initializing, wait a second and try again
-        //            else                      
-        //                await Task.Delay(1000);
-        //        }
-        //    }
-        //    catch ( Exception ex )
-        //    {
-        //        foreach ( var observer in Observers )
-        //            observer.OnError(ex);
-        //        throw;
-        //    }
-        //    finally
-        //    {
-        //        if ( failureReason is not null )
-        //            Logger.Warn(failureReason);
-
-        //        if ( deviceReady )
-        //        {
-        //            await Task.Delay(100);
-        //            await SelectInput(input);
-        //        }
-        //    }
-        //}
 
         public override async Task PowerOnSelectInput( object input )
         {
@@ -470,7 +394,6 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         }
 
-
         public override async Task DisplayMute( bool muted )
         {
             try
@@ -479,7 +402,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 if ( response.IndicatesFailure )
                     throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
                 
-                this.DisplayMuted = muted;
+                Status.DisplayMuted = muted;
                 NotifyObservers(string.Format("Video mute {0}", (muted?"ON":"OFF")));
             }
             catch ( Exception ex )
@@ -494,11 +417,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
         {
             try
             {
-                var response = await GetStatus();
-                if ( response.IndicatesFailure )
-                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
-
-                return this.DisplayMuted;
+                await GetStatus();
+                return Status.DisplayMuted;
             }
             catch ( Exception ex )
             {
@@ -566,7 +486,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 if ( response.IndicatesFailure )
                     throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
 
-                this.AudioMuted = muted;
+                Status.AudioMuted = muted;
                 NotifyObservers(string.Format("Audio mute {0}", ( muted ? "ON" : "OFF" )));
             }
             catch ( Exception ex )
@@ -581,11 +501,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
         {
             try
             {
-                var response = await GetStatus();
-                if ( response.IndicatesFailure )
-                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
-
-                return this.AudioMuted;
+                await GetStatus();
+                return Status.AudioMuted;
             }
             catch ( Exception ex )
             {
@@ -594,8 +511,5 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 throw;
             }
         }
-
-#endregion
-
     }
 }

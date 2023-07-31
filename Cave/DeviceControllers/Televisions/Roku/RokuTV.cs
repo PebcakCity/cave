@@ -40,10 +40,13 @@ namespace Cave.DeviceControllers.Televisions.Roku
         }
 
         /// <summary>
-        /// For display testing application
+        /// Fetch current device status and notify observers of that status, 
+        /// optionally sending the XML responses from the device-info and
+        /// media-player queries.
         /// </summary>
-        /// <returns>Combined response of /query/device-info and /query/media-player</returns>
-        public async Task GetStatus()
+        /// <param name="appWantsText">Whether the app is requesting the
+        /// response text to update a text view</param>
+        public async Task GetStatus(bool appWantsText = false)
         {
             try
             {
@@ -52,13 +55,21 @@ namespace Cave.DeviceControllers.Televisions.Roku
                 var deviceInfo = await GetDeviceInfo(cts.Token);
                 ParseDeviceInfo(deviceInfo);
 
-                cts.CancelAfter(5000);
-                var mediaPlayerInfo = await GetMediaPlayerInfo(cts.Token);
-
-                var statusMessage = deviceInfo + mediaPlayerInfo;
-                NotifyObservers(statusMessage);
+                if ( appWantsText )
+                {
+                    cts.CancelAfter(5000);
+                    var mediaPlayerInfo = await GetMediaPlayerInfo(cts.Token);
+                    var statusMessage = deviceInfo + mediaPlayerInfo;
+                    NotifyObservers(statusMessage);
+                }
+                else
+                    NotifyObservers();
             }
-            catch { throw; }
+            catch ( Exception ex )
+            {
+                Logger.Error($"RokuTV.{nameof(GetStatus)} :: {ex.Message}");
+                throw;
+            }
         }
 
         private async Task<string> GetDeviceInfo(CancellationToken token)

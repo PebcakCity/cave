@@ -1,46 +1,38 @@
-
-1. Figure out how PJLink inputs are going to fit into the Enumeration type.
-They are ASCII two-char codes.  They can't easily fit the int Id, string Name
-pattern.  They will need a useless ID, and a separate Code byte[] or string.
-Similar to Command.
-Ex.: Let Input.Id be 11, Input.Code returns either (string) '11' or (byte array)
-[0x31, 0x31].
-UPDATE: This is probably the best/only option.
-DONE, switched to SmartEnum.  Inputs will be similar to Command, having a
-Data byte[]
+1. I implemented a rather crappy mechanism (GetStatus(bool appWantsText)) for
+allowing an app to force a controller to get updated state information from a
+device and then send a text summary of it to the app for displaying in a
+text view.  I'm not too happy with it.  I don't like the idea of taking what
+was essentially a private business logic method (GetStatus) and making it
+public so that it can serve another purpose and be called by an app for
+updating the UI.  So I think I'm going to move GetStatus back to being private
+(and maybe rename it something more like UpdateStatus?)  Then I'll create a
+separate interface method for IDisplay (or maybe the abstract Device class
+itself) called GetStatusText/GetStatusString/GetDebugInfo or whatever that
+would get the device's current state, build that wall of text with it and
+return it to the app for display.  GetDebugInfo sounds like the best name
+for it.  I guess it could return _all_ the information we have about the
+device and its Status.
 
 --
 
-2. Figure out a data structure for storing multiple devices and a set of
+2. Clean up the controllers...
+
+--
+
+3. Clean up the apps...
+
+--
+
+4. Implement a configuration file/database reader system for the RPi apps.
+
+Figure out a data structure for storing multiple devices and a set of
 "inputs" or instruction sequences that will cause different inputs to be
 selected on multiple devices. Eg. To use a laptop, select input RGB 1 on the
 projector and input 2 on the switcher.  To use the Apple TV, just select
 input HDMI 1 on the projector.  These buttons are what we would ideally like
 to be able to display on some sort of "Home screen", along with buttons for
-system on / system off.  I just need to figure out the cleanest way to handle it.
-The biggest issue I see is that it essentially boils down to a dictionary of
-dictionaries.  Or dictionary of list of dictionaries.  Or something.
-Bottom line is it's nasty.  This is the point where the design gets a little
-frustrating.
-
-It seems like this is the point in all my attempts at this app where I hit a design
-wall.  I'd like to find an elegant solution to this problem for once.  This is at 
-least my third iteration at this.  How do we associate this set of input switches
-that need to occur on multiple devices with a single button on a home screen?  This
-has to be the single most useful feature of this application and if it doesn't work
-right, what's the point of the rest of the app?  This is what you typically see on a
-fancy vendor-installed control system from Crestron, etc.
-
-Assume we have a switcher in the cabinet connected by a relay & two cables
-plugged into it, one for the desktop PC and one for faculty laptops, plus an
-Apple TV mounted on the ceiling and plugged directly into the projector's HDMI
-port.  (Yes, this classroom's wiring is old and janky as shit, much like most
-of our classrooms.  New classrooms all get HDMI wiring these days, but a lot of
-our departments are still stuck with old VGA cabling but they want the new toys.
-They are buying bandaids like cheap VGA KVMs and wanting my department to add
-Apple TVs to their classrooms using them... dongle life.  Sometimes it's easier
-to mount it directly above the projector and tell them to just use the remote to
-switch inputs.  But I digress...)
+system on / system off.
+...
 
 Sources : { 
     "PC": [
@@ -110,7 +102,7 @@ async Task SelectSource(string sourceName)
 
 --
 
-3. I may want to change Projector.InputsAvailable and its matching
+5. I may want to change Projector.InputsAvailable and its matching
 field in Television to be a Dictionary<string,string>.  This would allow a button
 to receive a "friendly name" to display, while the other string is the actual
 enumeration member name that corresponds to the input.  If I get the HomePage
@@ -122,38 +114,6 @@ But it's all the same I suppose.  Maybe it wouldn't hurt to have the option?
 Side note: It might be useful to have a boolean flag for whether a device gets
 its own dedicated control page or not?  That's something to think about later.
 
-...
-
-99. Create the config file format and reader class for it.
-
-100. Continue working on Blazor app UI
-
-101. Happy coding.
-
-------------------------------------------
-
-Changes I'm considering in the near future:
-
-1. Should Device have a DeviceStatus field Device.Status?  Will this make
-the various Device subclasses (and CaveBlazor.DeviceController) cleaner?
-Storing all those fields in a single place?  We still create a new DeviceStatus
-instance in NECProjector.Initialize and NotifyObservers so not much really
-changes there.  We would just immediately assign that DeviceStatus instance
-to a single field and access all the data inside it through that field going
-forward.  What would the visibility be from DeviceController?  Would it be able
-to modify those fields/properties and would it matter?  Maybe we make them
-get/init only?  But then the Device itself can't write to it either.
-So for example NECProjector.SelectInput would not be able to say something
-like "this.Status.InputSelected = input" after selecting an input and before
-calling NotifyObservers.  NotifyObservers creates a new DeviceStatus wrapping
-all those fields, is there a way to ensure that if DeviceController writes
-to a field, it doesn't modify the value stored in the Device.Status instance?
-Sounds like DeviceStatus should likely be a struct and not a class so it's
-always copied and passed by value?
-
-2. Thinking about whether I should break DeviceController into multiple
-subclasses for dealing with different device types... DisplayController,
-AudioController, etc.
 
 -------------------------------
 

@@ -242,12 +242,12 @@
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="ButtonStatus">
-                <property name="label" translatable="yes">Status / Errors</property>
+              <object class="GtkButton" id="ButtonInfo">
+                <property name="label" translatable="yes">Device info</property>
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
                 <property name="receives-default">True</property>
-                <signal name="clicked" handler="ButtonStatus_Clicked" swapped="no"/>
+                <signal name="clicked" handler="ButtonInfo_Clicked" swapped="no"/>
               </object>
               <packing>
                 <property name="left-attach">0</property>
@@ -499,15 +499,20 @@
           </packing>
         </child>
         <child>
-          <object class="GtkTextView" id="TextViewStatus">
+          <object class="GtkScrolledWindow" id="ScrollWindowStatus">
             <property name="visible">True</property>
             <property name="can-focus">True</property>
-            <property name="margin-start">10</property>
-            <property name="margin-end">10</property>
-            <property name="editable">False</property>
-            <property name="wrap-mode">word</property>
-            <property name="left-margin">5</property>
-            <property name="monospace">True</property>
+            <property name="shadow-type">in</property>
+            <child>
+              <object class="GtkTextView" id="TextViewStatus">
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="margin-start">10</property>
+                <property name="margin-end">10</property>
+                <property name="editable">False</property>
+                <property name="left-margin">5</property>
+              </object>
+            </child>
           </object>
           <packing>
             <property name="expand">True</property>

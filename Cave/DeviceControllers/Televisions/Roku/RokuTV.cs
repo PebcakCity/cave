@@ -7,7 +7,7 @@ using NLog;
 
 namespace Cave.DeviceControllers.Televisions.Roku
 {
-    public class RokuTV : Television
+    public class RokuTV : Television, IHasDebugInfo
     {
         private HttpClient? Client = null;
         private static readonly Logger Logger = LogManager.GetLogger("RokuTV");
@@ -40,13 +40,9 @@ namespace Cave.DeviceControllers.Televisions.Roku
         }
 
         /// <summary>
-        /// Fetch current device status and notify observers of that status, 
-        /// optionally sending the XML responses from the device-info and
-        /// media-player queries.
+        /// Fetch current device status and notify observers of that status
         /// </summary>
-        /// <param name="appWantsText">Whether the app is requesting the
-        /// response text to update a text view</param>
-        public async Task GetStatus(bool appWantsText = false)
+        private async Task<string> GetStatus()
         {
             try
             {
@@ -55,15 +51,11 @@ namespace Cave.DeviceControllers.Televisions.Roku
                 var deviceInfo = await GetDeviceInfo(cts.Token);
                 ParseDeviceInfo(deviceInfo);
 
-                if ( appWantsText )
-                {
-                    cts.CancelAfter(5000);
-                    var mediaPlayerInfo = await GetMediaPlayerInfo(cts.Token);
-                    var statusMessage = deviceInfo + mediaPlayerInfo;
-                    NotifyObservers(statusMessage);
-                }
-                else
-                    NotifyObservers();
+                cts.CancelAfter(5000);
+                var mediaPlayerInfo = await GetMediaPlayerInfo(cts.Token);
+                
+                NotifyObservers();
+                return deviceInfo + "\n" + mediaPlayerInfo;
             }
             catch ( Exception ex )
             {
@@ -149,6 +141,15 @@ namespace Cave.DeviceControllers.Televisions.Roku
                 Observers.Add( observer );
             return new Unsubscriber(Observers, observer);
         }
+
+        public async Task<string> GetDebugInfo()
+        {
+            try
+            {
+                return await GetStatus();
+            }
+            catch{ throw; }
+        }        
 
         /**
          * Seems to me, maybe I should just make KeyPress public instead and

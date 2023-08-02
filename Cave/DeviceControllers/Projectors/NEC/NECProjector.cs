@@ -4,7 +4,7 @@ using NLog;
 
 namespace Cave.DeviceControllers.Projectors.NEC
 {
-    public partial class NECProjector : Projector
+    public partial class NECProjector : Projector, IHasDebugInfo
     {
         private Client? Client = null;
         private static readonly Logger Logger = LogManager.GetLogger("NECProjector");
@@ -43,13 +43,9 @@ namespace Cave.DeviceControllers.Projectors.NEC
 
 
         /// <summary>
-        /// Fetch current device status and notify observers of that status, 
-        /// optionally sending these observers a text string summarizing the
-        /// status and any errors currently being reported by the device.
+        /// Fetch current device status and notify observers of that status
         /// </summary>
-        /// <param name="appWantsText">Whether the app is requesting text to
-        /// update a text view</param>
-        public async Task GetStatus(bool appWantsText = false)
+        private async Task GetStatus()
         {
             try
             {
@@ -65,10 +61,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 // Get lamp hours if device has a lamp
                 await GetLampInfo(LampInfo.UsageTimeSeconds);
 
-                if ( appWantsText )
-                    NotifyObservers(await GetStatusText());
-                else
-                    NotifyObservers();
+                NotifyObservers();
             }
             catch ( Exception ex )
             {
@@ -77,30 +70,6 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         }
 
-        private async Task<string> GetStatusText()
-        {
-            string message = string.Empty;
-            message += $"Device name: {this.Name}\n"
-                + $"Power state: {Status.PowerState}\n"
-                + $"Input selected: {Status.InputSelected}\n";
-            message += "Video mute: " + ( ( Status.DisplayMuted==true ) ? "on" : "off" ) + "\n";
-            message += "Audio mute: " + ( ( Status.AudioMuted==true ) ? "on" : "off" ) + "\n";
-
-            if ( Status.LampHoursUsed > -1 && Status.LampHoursTotal > 0 )
-            {
-                int percentRemaining = 100 - (int)Math.Floor((double)Status.LampHoursUsed/(double)Status.LampHoursTotal);
-                message += $"Lamp hours used: {Status.LampHoursUsed} / {Status.LampHoursTotal} ({percentRemaining}% life remaining)\n";
-            }
-
-            var errors = await GetErrors();
-            if ( errors.Count > 0 )
-            {
-                message += "\nDevice is reporting the following error(s):\n";
-                foreach ( var error in errors )
-                    message += error.Message + "\n";
-            }
-            return message;
-        }
 
         /// <summary>
         /// Notify subscribers about current device status, passing an optional
@@ -183,8 +152,6 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         }
 
-
-
         public async Task<List<NECProjectorError>> GetErrors( bool logErrors = true )
         {
             try
@@ -206,13 +173,40 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         }
 
-
         public override IDisposable Subscribe( IObserver<DeviceStatus> observer )
         {
             if ( !Observers.Contains(observer) )
                 Observers.Add(observer);
             return new Unsubscriber(Observers, observer);
         }
+
+        public async Task<string> GetDebugInfo()
+        {
+            await GetStatus();
+            string debugInfo = string.Empty;
+            debugInfo += $"Device name: {this.Name}\n"
+                + $"Address: {this.Address}:{this.Port}"
+                + $"Power state: {Status.PowerState}\n"
+                + $"Input selected: {Status.InputSelected}\n";
+            debugInfo += "Video mute: " + ( ( Status.DisplayMuted==true ) ? "on" : "off" ) + "\n";
+            debugInfo += "Audio mute: " + ( ( Status.AudioMuted==true ) ? "on" : "off" ) + "\n";
+
+            if ( Status.LampHoursUsed > -1 && Status.LampHoursTotal > 0 )
+            {
+                int percentRemaining = 100 - (int)Math.Floor((double)Status.LampHoursUsed/(double)Status.LampHoursTotal);
+                debugInfo += $"Lamp hours used: {Status.LampHoursUsed} / {Status.LampHoursTotal} ({percentRemaining}% life remaining)\n";
+            }
+
+            var errors = await GetErrors();
+            if ( errors.Count > 0 )
+            {
+                debugInfo += "\nDevice is reporting the following error(s):\n";
+                foreach ( var error in errors )
+                    debugInfo += error.Message + "\n";
+            }
+            return debugInfo;
+        }
+
 
         // Cancellable awaitable PowerOn
 

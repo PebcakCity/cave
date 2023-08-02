@@ -542,7 +542,6 @@ namespace Cave.DisplayTester
                 if ( DisplayDevice is Projector pj )
                 {
                     await pj.DisplayMute(!this.DisplayMuted);
-                    this.DisplayMuted = !this.DisplayMuted;
                 }
             }
             catch ( Exception ex )
@@ -555,10 +554,9 @@ namespace Cave.DisplayTester
         {
             try
             {
-                if ( DisplayDevice is Television tv )
+                if ( DisplayDevice is IAudio ia )
                 {
-                    await tv.AudioMute(!this.AudioMuted);
-                    this.AudioMuted = !this.AudioMuted;
+                    await ia.AudioMute(!this.AudioMuted);
                 }
             }
             catch ( Exception ex )

@@ -159,6 +159,7 @@ namespace Cave.DisplayTester
             ButtonOff.Sensitive = false;
 
             ButtonConnect.Sensitive = true;
+            ComboBoxDeviceClass.Sensitive = true;
             EntryAddress.Sensitive = true;
             EntryPort.Sensitive = true;
         }

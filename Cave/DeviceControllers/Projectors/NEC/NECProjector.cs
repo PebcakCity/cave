@@ -185,7 +185,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             await GetStatus();
             string debugInfo = string.Empty;
             debugInfo += $"Device name: {this.Name}\n"
-                + $"Address: {this.Address}:{this.Port}"
+                + $"Address: {this.Address}:{this.Port}\n"
                 + $"Power state: {Status.PowerState}\n"
                 + $"Input selected: {Status.InputSelected}\n";
             debugInfo += "Video mute: " + ( ( Status.DisplayMuted==true ) ? "on" : "off" ) + "\n";
@@ -193,7 +193,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
 
             if ( Status.LampHoursUsed > -1 && Status.LampHoursTotal > 0 )
             {
-                int percentRemaining = 100 - (int)Math.Floor((double)Status.LampHoursUsed/(double)Status.LampHoursTotal);
+                int percentRemaining = 100 - (int)Math.Floor((double)Status.LampHoursUsed/(double)Status.LampHoursTotal*100.0);
                 debugInfo += $"Lamp hours used: {Status.LampHoursUsed} / {Status.LampHoursTotal} ({percentRemaining}% life remaining)\n";
             }
 

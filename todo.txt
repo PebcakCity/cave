@@ -13,6 +13,10 @@ return it to the app for display.  GetDebugInfo sounds like the best name
 for it.  I guess it could return _all_ the information we have about the
 device and its Status.
 
+Even better, was thinking on the way home, create IHasDebugInfo interface,
+implemented on a class-by-class basis.  Task<string> GetDebugInfo().  "Get info"
+button in the app calls this only if device implements it.
+
 --
 
 2. Clean up the controllers...
@@ -67,7 +71,8 @@ their source names and their @onclick is set to "@(() => SelectSource({text}))"
 SelectSource uses the button text to index into the Sources collection to get
 the list of KeyValuePairs, and then for each KeyValuePair in the List, we
 use the Key to index into the Devices collection to retrieve the actual Device
-instance, then check its interface and call the appropriate method to select input.
+instance, then check its interface and call the appropriate method to select
+input.
 
 Device GetDevice(string deviceName)
 {
@@ -103,13 +108,14 @@ async Task SelectSource(string sourceName)
 --
 
 5. I may want to change Projector.InputsAvailable and its matching
-field in Television to be a Dictionary<string,string>.  This would allow a button
-to receive a "friendly name" to display, while the other string is the actual
-enumeration member name that corresponds to the input.  If I get the HomePage
-component worked out, then this might not be a big deal.  I had originally planned
-to have the "friendly names" appear on the HomePage like "Apple TV", etc.
-The DeviceController page was just going to show the actual input name.
-But it's all the same I suppose.  Maybe it wouldn't hurt to have the option?
+field in Television to be a Dictionary<string,string>.  This would allow a
+button to receive a "friendly name" to display, while the other string is the
+actual enumeration member name that corresponds to the input.  If I get the
+HomePage component worked out, then this might not be a big deal.  I had
+originally planned to have the "friendly names" appear on the HomePage like
+"Apple TV", etc. The DeviceController page was just going to show the actual
+input name. But it's all the same I suppose.  Maybe it wouldn't hurt to have
+the option?
 
 Side note: It might be useful to have a boolean flag for whether a device gets
 its own dedicated control page or not?  That's something to think about later.

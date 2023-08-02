@@ -216,6 +216,7 @@ namespace Cave.DisplayTester
             ButtonDisconnect.Sensitive = true;
             ButtonOn.Sensitive = true;
             ButtonOff.Sensitive = true;
+            ButtonMute.Sensitive = true;
             GridControls.Sensitive = true;
 
             ButtonConnect.Sensitive = false;

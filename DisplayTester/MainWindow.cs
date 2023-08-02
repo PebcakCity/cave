@@ -36,7 +36,7 @@ namespace Cave.DisplayTester
         [UI] private Button ButtonInput2 = null;
         [UI] private Button ButtonInput3 = null;
         [UI] private Button ButtonInput4 = null;
-        [UI] private Button ButtonStatus = null;
+        [UI] private Button ButtonInfo = null;
 
         /* Channel/volume keys */
         [UI] private Grid GridControlsChannelVolume = null;
@@ -55,6 +55,7 @@ namespace Cave.DisplayTester
         [UI] private Button ButtonUp = null;
         [UI] private Button ButtonDown = null;
 
+        [UI] private ScrolledWindow ScrollWindowStatus = null;
         [UI] private TextView TextViewStatus = null;
 
 
@@ -67,6 +68,9 @@ namespace Cave.DisplayTester
         private readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private Cave.DeviceControllers.Device DisplayDevice = null;
         private IDisposable Unsubscriber = null;
+
+        private bool DisplayMuted;
+        private bool AudioMuted;
 
 
         public MainWindow() : this(new Builder("MainWindow.glade")) { }
@@ -98,10 +102,11 @@ namespace Cave.DisplayTester
 
         public void OnNext( DeviceStatus status )
         {
+            this.DisplayMuted = status.DisplayMuted;
+            this.AudioMuted = status.AudioMuted;
             if ( status.Message != null )
                 DisplayMessage(status.Message);
         }
-
 
         public void OnError( Exception exception )
         {
@@ -246,6 +251,7 @@ namespace Cave.DisplayTester
                 OnError(ex);
             }
         }
+
         private async void ButtonOff_Clicked( object sender, EventArgs a )
         {
             try
@@ -259,176 +265,22 @@ namespace Cave.DisplayTester
                 OnError(ex);
             }
         }
-        private void ButtonInput1_Clicked( object sender, EventArgs a )
+
+        private async void ButtonInput1_Clicked( object sender, EventArgs a )
         {
             try
             {
-
-            }
-            catch ( Exception ex )
-            {
-                OnError(ex);
-            }
-        }
-        private void ButtonInput2_Clicked( object sender, EventArgs a )
-        {
-            try
-            {
-
-            }
-            catch ( Exception ex )
-            {
-                OnError(ex);
-            }
-        }
-        private void ButtonInput3_Clicked( object sender, EventArgs a )
-        {
-            try
-            {
-
-            }
-            catch ( Exception ex )
-            {
-                OnError(ex);
-            }
-        }
-        private void ButtonInput4_Clicked( object sender, EventArgs a )
-        {
-            try
-            {
-
-            }
-            catch ( Exception ex )
-            {
-                OnError(ex);
-            }
-        }
-        private void ButtonStatus_Clicked( object sender, EventArgs a )
-        {
-            try
-            {
-
-            }
-            catch ( Exception ex )
-            {
-                OnError(ex);
-            }
-        }
-        private void ButtonChannelUp_Clicked( object sender, EventArgs a )
-        {
-            try
-            {
-
-            }
-            catch ( Exception ex )
-            {
-                OnError(ex);
-            }
-        }
-        private void ButtonChannelDown_Clicked( object sender, EventArgs a )
-        {
-            try
-            {
-
-            }
-            catch ( Exception ex )
-            {
-                OnError(ex);
-            }
-        }
-        private void ButtonVolumeUp_Clicked( object sender, EventArgs a )
-        {
-            try
-            {
-
-            }
-            catch ( Exception ex )
-            {
-                OnError(ex);
-            }
-        }
-        private void ButtonVolumeDown_Clicked( object sender, EventArgs a )
-        {
-            try
-            {
-
-            }
-            catch ( Exception ex )
-            {
-                OnError(ex);
-            }
-        }
-        private void ButtonRewind_Clicked( object sender, EventArgs a )
-        {
-            try
-            {
-
-            }
-            catch ( Exception ex )
-            {
-                OnError(ex);
-            }
-        }
-        private void ButtonFastForward_Clicked( object sender, EventArgs a )
-        {
-            try
-            {
-
-            }
-            catch ( Exception ex )
-            {
-                OnError(ex);
-            }
-        }
-        private void ButtonPlay_Clicked( object sender, EventArgs a )
-        {
-            try
-            {
-
-            }
-            catch ( Exception ex )
-            {
-                OnError(ex);
-            }
-        }
-        private void ButtonLeft_Clicked( object sender, EventArgs a )
-        {
-            try
-            {
-
-            }
-            catch ( Exception ex )
-            {
-                OnError(ex);
-            }
-        }
-        private void ButtonRight_Clicked( object sender, EventArgs a )
-        {
-            try
-            {
-
-            }
-            catch ( Exception ex )
-            {
-                OnError(ex);
-            }
-        }
-        private void ButtonUp_Clicked( object sender, EventArgs a )
-        {
-            try
-            {
-
-            }
-            catch ( Exception ex )
-            {
-                OnError(ex);
-            }
-        }
-        private void ButtonDown_Clicked( object sender, EventArgs a )
-        {
-            try
-            {
-
+                switch ( DisplayDevice )
+                {
+                    case NECProjector nec:
+                        await nec.PowerOnSelectInput("RGB1");
+                        break;
+                    case RokuTV roku:
+                        await roku.SelectInput("InputHDMI1");
+                        break;
+                    default:
+                        break;
+                }
             }
             catch ( Exception ex )
             {
@@ -436,22 +288,43 @@ namespace Cave.DisplayTester
             }
         }
 
-        private void ButtonBlank_Clicked( object sender, EventArgs a )
+        private async void ButtonInput2_Clicked( object sender, EventArgs a )
         {
             try
             {
-
+                switch ( DisplayDevice )
+                {
+                    case NECProjector nec:
+                        await nec.PowerOnSelectInput("RGB2");
+                        break;
+                    case RokuTV roku:
+                        await roku.SelectInput("InputHDMI2");
+                        break;
+                    default:
+                        break;
+                }
             }
             catch ( Exception ex )
             {
                 OnError(ex);
             }
         }
-        private void ButtonMute_Clicked( object sender, EventArgs a )
+
+        private async void ButtonInput3_Clicked( object sender, EventArgs a )
         {
             try
             {
-
+                switch ( DisplayDevice )
+                {
+                    case NECProjector nec:
+                        await nec.PowerOnSelectInput("HDMI1");
+                        break;
+                    case RokuTV roku:
+                        await roku.SelectInput("InputHDMI3");
+                        break;
+                    default:
+                        break;
+                }
             }
             catch ( Exception ex )
             {
@@ -459,5 +332,216 @@ namespace Cave.DisplayTester
             }
         }
 
+        private async void ButtonInput4_Clicked( object sender, EventArgs a )
+        {
+            try
+            {
+                switch ( DisplayDevice )
+                {
+                    case NECProjector nec:
+                        await nec.PowerOnSelectInput("Video");
+                        break;
+                    case RokuTV roku:
+                        await roku.SelectInput("InputTuner");
+                        break;
+                    default:
+                        break;
+                }
+            }
+            catch ( Exception ex )
+            {
+                OnError(ex);
+            }
+        }
+
+        private async void ButtonInfo_Clicked( object sender, EventArgs a )
+        {
+            try
+            {
+                if ( DisplayDevice is IHasDebugInfo ihdi )
+                {
+                    var debugInfo = await ihdi.GetDebugInfo();
+                    TextViewStatus.Buffer.Text = debugInfo;
+                }
+            }
+            catch ( Exception ex )
+            {
+                OnError(ex);
+            }
+        }
+
+        private async void ButtonChannelUp_Clicked( object sender, EventArgs a )
+        {
+            try
+            {
+                if ( DisplayDevice is Television tv )
+                    await tv.ChannelUp();
+            }
+            catch ( Exception ex )
+            {
+                OnError(ex);
+            }
+        }
+
+        private async void ButtonChannelDown_Clicked( object sender, EventArgs a )
+        {
+            try
+            {
+                if ( DisplayDevice is Television tv )
+                    await tv.ChannelDown();
+            }
+            catch ( Exception ex )
+            {
+                OnError(ex);
+            }
+        }
+
+        private async void ButtonVolumeUp_Clicked( object sender, EventArgs a )
+        {
+            try
+            {
+                if ( DisplayDevice is Television tv )
+                    await tv.VolumeUp();
+            }
+            catch ( Exception ex )
+            {
+                OnError(ex);
+            }
+        }
+
+        private async void ButtonVolumeDown_Clicked( object sender, EventArgs a )
+        {
+            try
+            {
+                if ( DisplayDevice is Television tv )
+                    await tv.VolumeDown();
+            }
+            catch ( Exception ex )
+            {
+                OnError(ex);
+            }
+        }
+        private async void ButtonRewind_Clicked( object sender, EventArgs a )
+        {
+            try
+            {
+                if ( DisplayDevice is Television tv )
+                    await tv.Reverse();
+            }
+            catch ( Exception ex )
+            {
+                OnError(ex);
+            }
+        }
+
+        private async void ButtonFastForward_Clicked( object sender, EventArgs a )
+        {
+            try
+            {
+                if ( DisplayDevice is Television tv )
+                    await tv.FastForward();
+            }
+            catch ( Exception ex )
+            {
+                OnError(ex);
+            }
+        }
+
+        private async void ButtonPlay_Clicked( object sender, EventArgs a )
+        {
+            try
+            {
+                if ( DisplayDevice is Television tv )
+                    await tv.Play();
+            }
+            catch ( Exception ex )
+            {
+                OnError(ex);
+            }
+        }
+
+        private async void ButtonLeft_Clicked( object sender, EventArgs a )
+        {
+            try
+            {
+                if ( DisplayDevice is Television tv )
+                    await tv.ArrowLeft();
+            }
+            catch ( Exception ex )
+            {
+                OnError(ex);
+            }
+        }
+
+        private async void ButtonRight_Clicked( object sender, EventArgs a )
+        {
+            try
+            {
+                if ( DisplayDevice is Television tv )
+                    await tv.ArrowRight();
+            }
+            catch ( Exception ex )
+            {
+                OnError(ex);
+            }
+        }
+
+        private async void ButtonUp_Clicked( object sender, EventArgs a )
+        {
+            try
+            {
+                if ( DisplayDevice is Television tv )
+                    await tv.ArrowUp();
+            }
+            catch ( Exception ex )
+            {
+                OnError(ex);
+            }
+        }
+
+        private async void ButtonDown_Clicked( object sender, EventArgs a )
+        {
+            try
+            {
+                if ( DisplayDevice is Television tv )
+                    await tv.ArrowDown();
+            }
+            catch ( Exception ex )
+            {
+                OnError(ex);
+            }
+        }
+
+        private async void ButtonBlank_Clicked( object sender, EventArgs a )
+        {
+            try
+            {
+                if ( DisplayDevice is Projector pj )
+                {
+                    await pj.DisplayMute(!this.DisplayMuted);
+                    this.DisplayMuted = !this.DisplayMuted;
+                }
+            }
+            catch ( Exception ex )
+            {
+                OnError(ex);
+            }
+        }
+
+        private async void ButtonMute_Clicked( object sender, EventArgs a )
+        {
+            try
+            {
+                if ( DisplayDevice is Television tv )
+                {
+                    await tv.AudioMute(!this.AudioMuted);
+                    this.AudioMuted = !this.AudioMuted;
+                }
+            }
+            catch ( Exception ex )
+            {
+                OnError(ex);
+            }
+        }
     }
 }

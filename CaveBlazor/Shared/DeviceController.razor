@@ -126,7 +126,7 @@ else
         try
         {
             IDisplay id = Device as IDisplay;
-            await id.DisplayOn();
+            await id.DisplayPowerOn();
         }
         catch { }
     }
@@ -136,7 +136,7 @@ else
         try
         {
             IDisplay id = Device as IDisplay;
-            await id.DisplayOff();
+            await id.DisplayPowerOff();
         }
         catch { }
     }
@@ -171,7 +171,7 @@ else
         try
         {
             NECProjector nec = Device as NECProjector;
-            await nec.VolumeUp();
+            await nec.AudioVolumeUp();
         }
         catch { }
     }
@@ -181,7 +181,7 @@ else
         try
         {
             NECProjector nec = Device as NECProjector;
-            await nec.VolumeDown();
+            await nec.AudioVolumeDown();
         }
         catch { } 
     }

@@ -143,8 +143,8 @@ namespace CaveGtk
                     DisplayMessage("No errors reported");
             }
         }
-        private void BtnOnClicked(object sender, EventArgs a) { Projector?.DisplayOn(); }
-        private void BtnOffClicked(object sender, EventArgs a) { Projector?.DisplayOff(); }
+        private void BtnOnClicked(object sender, EventArgs a) { Projector?.DisplayPowerOn(); }
+        private void BtnOffClicked(object sender, EventArgs a) { Projector?.DisplayPowerOff(); }
 
         private void DisplayMessage( string message )
         {

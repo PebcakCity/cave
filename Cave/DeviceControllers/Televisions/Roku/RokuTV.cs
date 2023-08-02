@@ -178,7 +178,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
         }
 
-        public override async Task DisplayOn()
+        public override async Task DisplayPowerOn()
         {
             try
             {
@@ -194,7 +194,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
         }
 
-        public override async Task DisplayOff()
+        public override async Task DisplayPowerOff()
         {
             try
             {
@@ -238,14 +238,14 @@ namespace Cave.DeviceControllers.Televisions.Roku
         {
             try
             {
-                await DisplayOn();
+                await DisplayPowerOn();
                 await Task.Delay(1000);
                 await SelectInput(obj);
             }
             catch { throw; }
         }
 
-        public override async Task VolumeUp()
+        public override async Task AudioVolumeUp()
         {
             try
             {
@@ -260,7 +260,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
         }
 
-        public override async Task VolumeDown()
+        public override async Task AudioVolumeDown()
         {
             try
             {

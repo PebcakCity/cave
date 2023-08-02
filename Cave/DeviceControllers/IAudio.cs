@@ -2,9 +2,9 @@ namespace Cave.DeviceControllers
 {
     public interface IAudio
     {
-        Task VolumeUp();
-        Task VolumeDown();
+        Task AudioVolumeUp();
+        Task AudioVolumeDown();
         Task AudioMute( bool muted );
-        Task<bool> IsAudioMuted();
+        Task<bool> AudioIsMuted();
     }
 }

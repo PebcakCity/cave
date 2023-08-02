@@ -3,8 +3,8 @@ namespace Cave.DeviceControllers.Televisions
     public abstract class Television : Device, IDisplayInputSelectable, IAudio
     {
         /* IDisplay */
-        public virtual Task DisplayOn() { throw new NotImplementedException(); }
-        public virtual Task DisplayOff() { throw new NotImplementedException(); }
+        public virtual Task DisplayPowerOn() { throw new NotImplementedException(); }
+        public virtual Task DisplayPowerOff() { throw new NotImplementedException(); }
 
         /* IInputSelectable */
         public virtual Task SelectInput( object obj ) { throw new NotImplementedException(); }
@@ -13,10 +13,10 @@ namespace Cave.DeviceControllers.Televisions
         public virtual Task PowerOnSelectInput( object obj ) { throw new NotImplementedException(); }
 
         /* IAudio */
-        public virtual Task VolumeUp() { throw new NotImplementedException(); }
-        public virtual Task VolumeDown() { throw new NotImplementedException(); }
+        public virtual Task AudioVolumeUp() { throw new NotImplementedException(); }
+        public virtual Task AudioVolumeDown() { throw new NotImplementedException(); }
         public virtual Task AudioMute( bool muted ) { throw new NotImplementedException(); }
-        public virtual Task<bool> IsAudioMuted() { throw new NotImplementedException(); }
+        public virtual Task<bool> AudioIsMuted() { throw new NotImplementedException(); }
 
         /* Television */
         public virtual Task Play() { throw new NotImplementedException(); }

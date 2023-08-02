@@ -267,7 +267,7 @@ namespace Cave.DisplayTester
             {
                 IDisplay display = DisplayDevice as IDisplay;
                 if ( display != null )
-                    await display.DisplayOn();
+                    await display.DisplayPowerOn();
             }
             catch ( Exception ex )
             {
@@ -281,7 +281,7 @@ namespace Cave.DisplayTester
             {
                 IDisplay display = DisplayDevice as IDisplay;
                 if ( display != null )
-                    await display.DisplayOff();
+                    await display.DisplayPowerOff();
             }
             catch ( Exception ex )
             {
@@ -424,7 +424,7 @@ namespace Cave.DisplayTester
             try
             {
                 if ( DisplayDevice is Television tv )
-                    await tv.VolumeUp();
+                    await tv.AudioVolumeUp();
             }
             catch ( Exception ex )
             {
@@ -437,7 +437,7 @@ namespace Cave.DisplayTester
             try
             {
                 if ( DisplayDevice is Television tv )
-                    await tv.VolumeDown();
+                    await tv.AudioVolumeDown();
             }
             catch ( Exception ex )
             {

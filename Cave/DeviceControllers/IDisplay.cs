@@ -2,7 +2,7 @@
 {
     public interface IDisplay
     {
-        Task DisplayOn();
-        Task DisplayOff();
+        Task DisplayPowerOn();
+        Task DisplayPowerOff();
     }
 }

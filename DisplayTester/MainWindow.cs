@@ -213,26 +213,47 @@ namespace Cave.DisplayTester
 
         private void EnableControlsForDevice( Cave.DeviceControllers.Device device )
         {
-            ButtonDisconnect.Sensitive = true;
-            ButtonOn.Sensitive = true;
-            ButtonOff.Sensitive = true;
-            ButtonMute.Sensitive = true;
-            GridControls.Sensitive = true;
+            /* Since we apparently connected, disable controls for selecting &
+             * connecting to a device ... */
+            DisableWidgets(
+                ButtonConnect,
+                EntryAddress,
+                EntryPort,
+                ComboBoxDeviceClass
+            );
 
-            ButtonConnect.Sensitive = false;
-            EntryAddress.Sensitive = false;
-            EntryPort.Sensitive = false;
-            ComboBoxDeviceClass.Sensitive = false;
+            /* ... and enable those for controlling this one & resetting the UI */
+            EnableWidgets(
+                ButtonDisconnect,
+                ButtonOn,
+                ButtonOff,
+                ButtonMute,
+                GridControls
+            );
 
             if ( device is Television )
             {
-                GridControlsChannelVolume.Sensitive = true;
-                GridControlsMedia.Sensitive = true;
+                EnableWidgets(
+                    GridControlsChannelVolume,
+                    GridControlsMedia
+                );
             }
             else if ( device is Projector )
             {
-                ButtonBlank.Sensitive = true;
+                EnableWidgets(ButtonBlank);
             }
+        }
+
+        private static void EnableWidgets( params Gtk.Widget[] widgets )
+        {
+            foreach ( var widget in widgets )
+                widget.Sensitive = true;
+        }
+
+        private static void DisableWidgets( params Gtk.Widget[] widgets )
+        {
+            foreach ( var widget in widgets )
+                widget.Sensitive = false;
         }
 
         private void ButtonDisconnect_Clicked( object sender, EventArgs a )

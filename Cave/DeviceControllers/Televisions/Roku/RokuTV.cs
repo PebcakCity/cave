@@ -7,6 +7,10 @@ using NLog;
 
 namespace Cave.DeviceControllers.Televisions.Roku
 {
+    /// <summary>
+    /// A simple controller for Roku TVs using their REST API published here:
+    /// https://developer.roku.com/docs/developer-program/dev-tools/external-control-api.md
+    /// </summary>
     public class RokuTV : Television, IHasDebugInfo
     {
         private HttpClient? Client = null;
@@ -14,6 +18,18 @@ namespace Cave.DeviceControllers.Televisions.Roku
         private DeviceStatus Status;
         private List<IObserver<DeviceStatus>> Observers;
 
+        /// <summary>
+        /// Creates a new <see cref="RokuTV"/> object with the specified
+        /// name, IP address, port, and a list of strings representing the
+        /// selectable <see cref="Input"/>s available on this device.
+        /// </summary>
+        /// <param name="deviceName">A name for the device.</param>
+        /// <param name="address">IP address of the device.</param>
+        /// <param name="port">Port to connect to.  If unspecified defaults
+        /// to 8060, the Roku external control protocol (ECP) port.</param>
+        /// <param name="inputs">List of strings corresponding to input names
+        /// available.  If null, sensible defaults available on most newer
+        /// models are chosen.</param>
         public RokuTV(string deviceName, string address, int port=8060, List<string>? inputs = null)
             : base(deviceName, address, port)
         {
@@ -24,6 +40,11 @@ namespace Cave.DeviceControllers.Televisions.Roku
             this.InputsAvailable = inputs ?? new List<string> { nameof(Input.InputTuner), nameof(Input.InputHDMI1) };
         }
 
+        /// <summary>
+        /// Tries to connect to a Roku TV at the address and port specified in
+        /// the constructor.  If successful, it calls <see cref="GetStatus"/> to
+        /// get some basic information from the device.
+        /// </summary>
         public override async Task Initialize()
         {
             try
@@ -40,8 +61,12 @@ namespace Cave.DeviceControllers.Televisions.Roku
         }
 
         /// <summary>
-        /// Fetch current device status and notify observers of that status
+        /// Fetches current device state using ECP commands "/query/device-info"
+        /// and "/query/media-player" and then publishes state changes to
+        /// observers.
         /// </summary>
+        /// <returns>A text string consisting of the XML output of the ECP
+        /// commands executed for device debugging purposes.</returns>
         private async Task<string> GetStatus()
         {
             try
@@ -64,6 +89,11 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
         }
 
+        /// <summary>
+        /// Executes the ECP command "/query/device-info".
+        /// </summary>
+        /// <returns>A text string containing the XML response of the command.
+        /// </returns>
         private async Task<string> GetDeviceInfo(CancellationToken token)
         {
             try
@@ -75,6 +105,11 @@ namespace Cave.DeviceControllers.Televisions.Roku
             catch { throw; }
         }
 
+        /// <summary>
+        /// Executes the ECP command "/query/media-player".
+        /// </summary>
+        /// <returns>A text string containing the XML response of the command.
+        /// </returns>
         private async Task<string> GetMediaPlayerInfo(CancellationToken token)
         {
             try
@@ -86,6 +121,10 @@ namespace Cave.DeviceControllers.Televisions.Roku
             catch { throw; }
         }
 
+        /// <summary>
+        /// Parses the XML response from <see cref="GetDeviceInfo"/> to update
+        /// device state.
+        /// </summary>
         private void ParseDeviceInfo(string? deviceInfo)
         {
             try
@@ -124,6 +163,13 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
         }
 
+        /// <summary>
+        /// Passes all current device state to observers, optionally passing a
+        /// message of the given <see cref="DeviceStatus.MessageType">MessageType</see>
+        /// (Info, Success, Warning, Error) as well.
+        /// </summary>
+        /// <param name="message">An optional message to display</param>
+        /// <param name="type">The type or severity level of the message to display</param>
         private void NotifyObservers(string? message = null, MessageType type = MessageType.Info)
         {
             foreach ( var observer in this.Observers )
@@ -135,6 +181,13 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
         }
 
+        /// <summary>
+        /// Subscribes an <see cref="IObserver{T}"/> to this <see cref="IObservable{T}"/>
+        /// where <typeparamref name="T"/> is a <see cref="DeviceStatus"/> struct.
+        /// </summary>
+        /// <param name="observer"></param>
+        /// <returns>An <see cref="IDisposable"/> instance allowing the observer to
+        /// unsubscribe from this provider.</returns>
         public override IDisposable Subscribe( IObserver<DeviceStatus> observer )
         {
             if ( ! Observers.Contains( observer ) )
@@ -142,6 +195,12 @@ namespace Cave.DeviceControllers.Televisions.Roku
             return new Unsubscriber(Observers, observer);
         }
 
+        /// <summary>
+        /// Calls <see cref="GetStatus"/> to get the XML response of the ECP
+        /// commands "/query/device-info" and "/query/media-player" and returns
+        /// it for device troubleshooting/debugging purposes. 
+        /// </summary>
+        /// <returns>A string containing the XML responses.</returns>
         public async Task<string> GetDebugInfo()
         {
             try

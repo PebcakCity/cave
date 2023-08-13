@@ -11,7 +11,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
     /// A simple controller for Roku TVs using their REST API published here:
     /// https://developer.roku.com/docs/developer-program/dev-tools/external-control-api.md
     /// </summary>
-    public class RokuTV : Television, IHasDebugInfo
+    public class RokuTV : Television, IDebuggable
     {
         private HttpClient? Client = null;
         private static readonly Logger Logger = LogManager.GetLogger("RokuTV");
@@ -479,6 +479,56 @@ namespace Cave.DeviceControllers.Televisions.Roku
             {
                 foreach ( var observer in this.Observers )
                     observer.OnError(ex);
+                throw;
+            }
+        }
+
+        public override async Task GoBack()
+        {
+            try
+            {
+                await KeyPress("Back");
+            }
+            catch ( Exception ex )
+            {
+                foreach ( var observer in this.Observers )
+                    observer.OnError(ex);
+                throw;
+            }
+        }
+
+        public override async Task Home()
+        {
+            try
+            {
+                await KeyPress("Home");
+            }
+            catch ( Exception ex )
+            {
+                foreach ( var observer in this.Observers )
+                    observer.OnError(ex);
+                throw;
+            }
+        }
+
+        public async Task ClearDeviceCache()
+        {
+            try
+            {
+                var keys = new string[] { "Home", "Home", "Home", "Home", "Home",
+                                            "Up", "Rev", "Rev", "Fwd", "Fwd" };
+                foreach ( var key in keys )
+                {
+                    await KeyPress(key);
+                    await Task.Delay(100);
+                }
+                NotifyObservers("Clearing your device's cache.  Please wait for it to restart...");
+            }
+            catch ( Exception ex )
+            {
+                foreach ( var observer in this.Observers )
+                    observer.OnError(ex);
+                Logger.Error(ex);
                 throw;
             }
         }

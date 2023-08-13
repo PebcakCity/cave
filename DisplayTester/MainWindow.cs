@@ -55,6 +55,10 @@ namespace Cave.DisplayTester
         [UI] private Button ButtonUp = null;
         [UI] private Button ButtonDown = null;
 
+        [UI] private Grid GridControlsBackHome = null;
+        [UI] private Button ButtonBack = null;
+        [UI] private Button ButtonHome = null;
+
         [UI] private ScrolledWindow ScrollWindowStatus = null;
         [UI] private TextView TextViewStatus = null;
 
@@ -151,6 +155,7 @@ namespace Cave.DisplayTester
             // Disable all controls except ButtonConnect, EntryAddress, EntryPort
             GridControlsChannelVolume.Sensitive = false;
             GridControlsMedia.Sensitive = false;
+            GridControlsBackHome.Sensitive = false;
             GridControls.Sensitive = false;
             ButtonDisconnect.Sensitive = false;
             ButtonBlank.Sensitive = false;
@@ -235,7 +240,8 @@ namespace Cave.DisplayTester
             {
                 EnableWidgets(
                     GridControlsChannelVolume,
-                    GridControlsMedia
+                    GridControlsMedia,
+                    GridControlsBackHome
                 );
             }
             else if ( device is Projector )
@@ -381,7 +387,7 @@ namespace Cave.DisplayTester
         {
             try
             {
-                if ( DisplayDevice is IHasDebugInfo ihdi )
+                if ( DisplayDevice is IDebuggable ihdi )
                 {
                     var debugInfo = await ihdi.GetDebugInfo();
                     TextViewStatus.Buffer.Text = debugInfo;
@@ -558,6 +564,32 @@ namespace Cave.DisplayTester
                 {
                     await ia.AudioMute(!this.AudioMuted);
                 }
+            }
+            catch ( Exception ex )
+            {
+                OnError(ex);
+            }
+        }
+
+        private async void ButtonBack_Clicked( object sender, EventArgs a )
+        {
+            try
+            {
+                if ( DisplayDevice is Television tv )
+                    await tv.GoBack();
+            }
+            catch ( Exception ex )
+            {
+                OnError(ex);
+            }
+        }
+
+        private async void ButtonHome_Clicked( object sender, EventArgs a )
+        {
+            try
+            {
+                if ( DisplayDevice is Television tv )
+                    await tv.Home();
             }
             catch ( Exception ex )
             {

@@ -8,7 +8,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
     /// An IP-based controller for projectors manufactured by NEC Display Corporation
     /// (Sharp NEC Display Solutions).
     /// </summary>
-    public partial class NECProjector : Projector, IHasDebugInfo
+    public partial class NECProjector : Projector, IDebuggable
     {
         private Client? Client = null;
         private static readonly Logger Logger = LogManager.GetLogger("NECProjector");
@@ -652,7 +652,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
 
         #endregion
 
-        #region interface IHasDebugInfo
+        #region interface IDebuggable
 
         /// <summary>
         /// Gets a string containing information (device name, address, current

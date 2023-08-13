@@ -1,6 +1,6 @@
 namespace Cave.DeviceControllers
 {
-    public interface IHasDebugInfo
+    public interface IDebuggable
     {
         Task<string> GetDebugInfo();
     }

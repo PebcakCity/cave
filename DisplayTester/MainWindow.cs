@@ -387,9 +387,9 @@ namespace Cave.DisplayTester
         {
             try
             {
-                if ( DisplayDevice is IDebuggable ihdi )
+                if ( DisplayDevice is IDebuggable iDebug )
                 {
-                    var debugInfo = await ihdi.GetDebugInfo();
+                    var debugInfo = await iDebug.GetDebugInfo();
                     TextViewStatus.Buffer.Text = debugInfo;
                 }
             }

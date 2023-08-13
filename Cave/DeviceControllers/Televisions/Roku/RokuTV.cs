@@ -52,6 +52,26 @@ namespace Cave.DeviceControllers.Televisions.Roku
                 Client = new HttpClient();
                 Client.BaseAddress = new Uri($"http://{this.Address}:{this.Port}");
                 await GetStatus();
+                Logger.Info("RokuTV Initialized");
+                
+                // test IDebuggable methods...
+                var debuggable = (IDebuggable)this;
+
+                // list all callable methods for this device
+                var methods = debuggable.GetMethods();
+                foreach ( var method in methods )
+                    Logger.Info(method);
+                
+                // test case-insensitive invoke with parameters
+                /* null is required for CancellationToken param for some reason 
+                 * even though it defaults to null? Gives a TargetParameterCountException
+                 * otherwise */
+                debuggable.InvokeMethod("keypress", "volumedown", null);
+
+                // test calling async method and getting result?
+                var testResult = debuggable.InvokeMethod("getdebuginfo", null);
+                if ( testResult is Task<string> testResultString )
+                    Logger.Info(await testResultString);
             }
             catch ( Exception ex )
             {
@@ -215,7 +235,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
          * call it directly from the app?  Everything is a keypress.
          */
 
-        private async Task<HttpResponseMessage> KeyPress(string key, CancellationToken? token = null )
+        public async Task<HttpResponseMessage> KeyPress(string key, CancellationToken? token = null )
         {
             try
             {
@@ -511,7 +531,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
         }
 
-        public async Task ClearDeviceCache()
+        public async Task ClearCache()
         {
             try
             {

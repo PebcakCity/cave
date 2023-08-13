@@ -1,21 +1,18 @@
-1. I implemented a rather crappy mechanism (GetStatus(bool appWantsText)) for
-allowing an app to force a controller to get updated state information from a
-device and then send a text summary of it to the app for displaying in a
-text view.  I'm not too happy with it.  I don't like the idea of taking what
-was essentially a private business logic method (GetStatus) and making it
-public so that it can serve another purpose and be called by an app for
-updating the UI.  So I think I'm going to move GetStatus back to being private
-(and maybe rename it something more like UpdateStatus?)  Then I'll create a
-separate interface method for IDisplay (or maybe the abstract Device class
-itself) called GetStatusText/GetStatusString/GetDebugInfo or whatever that
-would get the device's current state, build that wall of text with it and
-return it to the app for display.  GetDebugInfo sounds like the best name
-for it.  I guess it could return _all_ the information we have about the
-device and its Status.
+1. Changed IHasDebugInfo interface to IDebuggable and added methods for listing
+available device methods and executing arbitrary methods by name.  Need to write
+the parser that reads and executes the commands and add the UI bits to the glade
+file (then finally get around to doing the rest of the things in this todo list)
 
-Even better, was thinking on the way home, create IHasDebugInfo interface,
-implemented on a class-by-class basis.  Task<string> GetDebugInfo().  "Get info"
-button in the app calls this only if device implements it.
+The idea is to have a textbox in the DisplayTester app that allows one to enter
+a method to execute with the params, then have the app parse this string and
+execute it, so we can have a sort of "debugging session" with a device.  This
+theoretically lets us have any number of callable methods that troubleshoot
+devices without having a dedicated button for each and every one.  Eg. the
+ClearCache method I added for RokuTV.  We don't want a button for this because
+we don't want to accidentally press it.  It's for resetting the app cache to fix
+a misbehaving app. (Such as DisneyPlus repeatedly giving me an error code 73
+when I'm located in the US and not using a VPN... I had to look up how to clear
+the cache, then delete the app, then restart the TV and readd the app to fix it)
 
 --
 

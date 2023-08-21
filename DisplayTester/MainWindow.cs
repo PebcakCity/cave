@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 using Gtk;
 using UI = Gtk.Builder.ObjectAttribute;
 
@@ -59,6 +61,10 @@ namespace Cave.DisplayTester
         [UI] private Grid GridControlsBackHome = null;
         [UI] private Button ButtonBack = null;
         [UI] private Button ButtonHome = null;
+
+        [UI] private Button ButtonExecute = null;
+        [UI] private Button ButtonClear = null;
+        [UI] private Entry EntryDebugCommand = null;
 
         [UI] private ScrolledWindow ScrollWindowStatus = null;
         [UI] private TextView TextViewStatus = null;
@@ -163,6 +169,9 @@ namespace Cave.DisplayTester
             ButtonMute.Sensitive = false;
             ButtonOn.Sensitive = false;
             ButtonOff.Sensitive = false;
+            ButtonExecute.Sensitive = false;
+            ButtonClear.Sensitive = false;
+            EntryDebugCommand.Sensitive = false;
 
             ButtonConnect.Sensitive = true;
             ComboBoxDeviceClass.Sensitive = true;
@@ -234,7 +243,10 @@ namespace Cave.DisplayTester
                 ButtonOn,
                 ButtonOff,
                 ButtonMute,
-                GridControls
+                GridControls,
+                ButtonExecute,
+                ButtonClear,
+                EntryDebugCommand
             );
 
             if ( device is Television )
@@ -595,6 +607,131 @@ namespace Cave.DisplayTester
             catch ( Exception ex )
             {
                 OnError(ex);
+            }
+        }
+
+        private void ButtonClear_Clicked( object sender, EventArgs a )
+        {
+            EntryDebugCommand.Buffer.Text = string.Empty;
+        }
+
+        private void EntryDebugCommand_Activated( object sender, EventArgs a )
+        {
+            ButtonExecute.Click();
+        }
+
+        /**
+         * Massively ugly!!!  Must clean this up and refactor into smaller pieces
+         */
+        private void ButtonExecute_Clicked( object sender, EventArgs a )
+        {
+            try
+            {
+                Regex reMethodName = new(@"\b([^()]+)\((.*)\)$");
+                var debugCommand = EntryDebugCommand.Buffer.Text;
+                Match match = reMethodName.Match(debugCommand);
+                if ( match.Success && match.Groups.Count > 2 )
+                {
+                    var methodName = match.Groups[1].Value;
+
+                    var paramStringTrimmed = match.Groups[2].Value.Trim();
+                    var paramStringList = paramStringTrimmed.Equals(string.Empty) ? null :
+                        Regex.Split(paramStringTrimmed, @"\s*,\s*");
+
+                    var actualParameterList = paramStringList is null ? null : new List<object>();
+
+                    Logger.Info($"Method name entered: {methodName}");
+
+                    if ( paramStringList != null )
+                    {
+                        Logger.Info("Parameter list: ");
+                        foreach ( string param in paramStringList )
+                        {
+                            object paramValue = GetParamValue(param.Trim());
+                            Logger.Info($"Parameter: {param} / Value: {paramValue}");
+                            actualParameterList.Add(paramValue);
+                        }
+                    }
+
+                    IDebuggable debuggable = DisplayDevice as IDebuggable;
+                    if ( debuggable != null )
+                    {
+                        // Special case: User enters "GetMethods()"
+                        if ( methodName.Equals("GetMethods", StringComparison.OrdinalIgnoreCase) )
+                        {
+                            string methodList = string.Join("\n", debuggable.GetMethods());
+                            DisplayMessage(methodList);
+                        }
+                        else
+                        {
+                            methodName = GetMethodName(methodName, debuggable);
+                            if ( methodName != null )
+                            {
+                                Logger.Info($"Found method name: {methodName}");
+
+                                if ( actualParameterList != null )
+                                {
+                                    Logger.Info($"Calling method {methodName} with parameter list: ");
+                                    foreach ( var paramVal in actualParameterList )
+                                    {
+                                        if ( paramVal != null )
+                                            Logger.Info($"{paramVal.ToString()}");
+                                        else
+                                            Logger.Info("null");
+                                    }
+                                    object returnVal = debuggable.InvokeMethod(methodName, actualParameterList.ToArray());
+                                    if ( returnVal is string returnValString )
+                                        DisplayMessage(returnValString);
+                                }
+                                else
+                                {
+                                    Logger.Info($"Calling method {methodName} with no parameters");
+
+                                    object returnVal = debuggable.InvokeMethod(methodName, null);
+                                    if ( returnVal is string returnValString )
+                                        DisplayMessage(returnValString);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch ( Exception ex )
+            {
+                Logger.Error(ex);
+                OnError(ex);
+            }
+        }
+
+        private static string GetMethodName( string name, IDebuggable debuggable )
+        {
+            var methodList = debuggable.GetMethods();
+            var index = methodList.FindIndex(
+                methodName => methodName.Equals(name, StringComparison.OrdinalIgnoreCase)
+            );
+            if ( index >= 0 )
+                return methodList[index];
+            return null;
+        }
+
+        private static object GetParamValue( string param )
+        {
+            switch ( param )
+            {
+                case "true":
+                    return true;
+                case "false":
+                    return false;
+                case "null":
+                    return null;
+                default:
+                    double floatVal;
+                    int intVal;
+                    if ( int.TryParse(param, out intVal) )
+                        return intVal;
+                    else if ( double.TryParse(param, out floatVal) )
+                        return floatVal;
+                    else return param;
             }
         }
     }

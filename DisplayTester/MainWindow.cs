@@ -8,6 +8,7 @@ using Cave.DeviceControllers.Projectors;
 using Cave.DeviceControllers.Projectors.NEC;
 using Cave.DeviceControllers.Televisions;
 using Cave.DeviceControllers.Televisions.Roku;
+using Cave.Interfaces;
 
 namespace Cave.DisplayTester
 {

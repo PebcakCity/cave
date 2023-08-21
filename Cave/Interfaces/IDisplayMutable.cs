@@ -1,8 +1,8 @@
-﻿namespace Cave.DeviceControllers
+﻿namespace Cave.Interfaces
 {
     public interface IDisplayMutable : IDisplay
     {
-        Task DisplayMute( bool muted );
+        Task DisplayMute(bool muted);
         Task<bool> DisplayIsMuted();
     }
 }

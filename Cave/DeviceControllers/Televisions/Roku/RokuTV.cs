@@ -5,6 +5,8 @@ using System.Xml;
 
 using NLog;
 
+using Cave.Interfaces;
+
 namespace Cave.DeviceControllers.Televisions.Roku
 {
     /// <summary>

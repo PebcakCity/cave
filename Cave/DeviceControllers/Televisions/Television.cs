@@ -1,3 +1,5 @@
+using Cave.Interfaces;
+
 namespace Cave.DeviceControllers.Televisions
 {
     public abstract class Television : Device, IDisplayInputSelectable, IAudio
@@ -39,12 +41,5 @@ namespace Cave.DeviceControllers.Televisions
         public string Address { get; protected set; }
         public int Port { get; protected set; }
         public List<string>? InputsAvailable { get; protected set; }
-
-
-        /* Device */
-        //public override Task Initialize() { throw new NotImplementedException(); }
-
-        /* IObservable<DeviceStatus> implementation */
-        //public override IDisposable Subscribe(IObserver<DeviceStatus> observer) { throw new NotImplementedException(); }
     }
 }

@@ -1,3 +1,4 @@
+using Cave.Interfaces;
 using Cave.Utils;
 
 namespace Cave.DeviceControllers.Projectors
@@ -38,12 +39,5 @@ namespace Cave.DeviceControllers.Projectors
         public string Address { get; protected set; }
         public int Port { get; protected set; }
         public List<string>? InputsAvailable { get; protected set; }
-
-
-        /* Device */
-        //public override Task Initialize() { throw new NotImplementedException(); }
-
-        /* IObservable<DeviceStatus> implementation */
-        //public override IDisposable Subscribe(IObserver<DeviceStatus> observer) { throw new NotImplementedException(); }
     }
 }

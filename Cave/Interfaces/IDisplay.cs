@@ -1,4 +1,4 @@
-﻿namespace Cave.DeviceControllers
+﻿namespace Cave.Interfaces
 {
     public interface IDisplay
     {

@@ -1,7 +1,7 @@
-﻿namespace Cave.DeviceControllers
+﻿namespace Cave.Interfaces
 {
     public interface IDisplayInputSelectable : IDisplay, IInputSelectable
     {
-        Task PowerOnSelectInput( object input );
+        Task PowerOnSelectInput(object input);
     }
 }

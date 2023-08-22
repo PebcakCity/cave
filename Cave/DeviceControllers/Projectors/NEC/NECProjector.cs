@@ -668,6 +668,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
             string debugInfo = string.Empty;
             debugInfo += $"Device name: {this.Name}\n"
                 + $"Address: {this.Address}:{this.Port}\n"
+                + $"Model: {Status.ModelNumber}\n"
+                + $"Serial #: {Status.SerialNumber}\n"
                 + $"Power state: {Status.PowerState}\n"
                 + $"Input selected: {Status.InputSelected}\n";
             debugInfo += "Video mute: " + ( ( Status.DisplayMuted==true ) ? "on" : "off" ) + "\n";

@@ -64,6 +64,7 @@ namespace Cave.DisplayTester
         [UI] private Button ButtonHome = null;
 
         [UI] private Button ButtonExecute = null;
+        [UI] private Button ButtonGetMethods = null;
         [UI] private Button ButtonClear = null;
         [UI] private Entry EntryDebugCommand = null;
 
@@ -611,11 +612,6 @@ namespace Cave.DisplayTester
             }
         }
 
-        private void ButtonClear_Clicked( object sender, EventArgs a )
-        {
-            EntryDebugCommand.Buffer.Text = string.Empty;
-        }
-
         private void EntryDebugCommand_Activated( object sender, EventArgs a )
         {
             ButtonExecute.Click();
@@ -625,6 +621,7 @@ namespace Cave.DisplayTester
         {
             try
             {
+                TextViewStatus.Buffer.Text = string.Empty;
                 if ( DisplayDevice is IDebuggable debuggable )
                 {
                     var result = SimpleMethodCallParser.ParseCallString(
@@ -632,6 +629,8 @@ namespace Cave.DisplayTester
                     );
                     if ( result is string resultString )
                         DisplayMessage(resultString);
+                    else 
+                        DisplayExecuteResult(result);
                 }
             }
             catch (Exception ex)
@@ -639,6 +638,53 @@ namespace Cave.DisplayTester
                 Logger.Error($"{nameof(ButtonExecute_Clicked)} :: {ex}");
                 OnError(ex);
             }
+        }
+
+        /* A most likely poor and ill-fated attempt to be able to display a
+         * wide variety of result types rather than just strings... it seems to
+         * be working for now? Task<T> are not covariant so unfortunately,
+         * I don't think we can just blanket await Task<object> (I've tried).*/
+        private async void DisplayExecuteResult(object result)
+        {
+            object tResult = null;
+            switch(result)
+            {
+                case string resultString:
+                    DisplayMessage(resultString);
+                    break;
+                case Task<string> resultTaskString:
+                    tResult = await resultTaskString;
+                    break;
+                case Task<HttpResponseMessage> resultTaskHttpResponseMessage:
+                    tResult = await resultTaskHttpResponseMessage;
+                    break;
+                case Task<bool> resultTaskBool:
+                    tResult = await resultTaskBool;
+                    break;
+                case Task<object> resultTaskObject:
+                    tResult = await resultTaskObject;
+                    break;
+                default:
+                    break;
+            }
+            if ( tResult != null )
+                DisplayMessage(tResult.ToString());
+        }
+
+        private void ButtonGetMethods_Clicked( object sender, EventArgs a )
+        {
+            try
+            {
+                EntryDebugCommand.Buffer.Text = "GetMethods()";
+                ButtonExecute.Click();
+            }
+            catch { throw; }
+        }
+
+        private void ButtonClear_Clicked( object sender, EventArgs a )
+        {
+            EntryDebugCommand.Buffer.Text = string.Empty;
+            TextViewStatus.Buffer.Text = string.Empty;
         }
     }
 }

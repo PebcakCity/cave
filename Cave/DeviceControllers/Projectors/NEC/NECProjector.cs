@@ -3,6 +3,7 @@ using System.Text;
 using NLog;
 
 using Cave.Interfaces;
+using System.Reflection;
 
 namespace Cave.DeviceControllers.Projectors.NEC
 {
@@ -686,6 +687,27 @@ namespace Cave.DeviceControllers.Projectors.NEC
                     debugInfo += error.Message + "\n";
             }
             return debugInfo;
+        }
+
+        /// <summary>
+        /// Replaces the default implementation.  Amended to remove the
+        /// Subscribe() method from the list of callable methods.  I was going
+        /// to alter the default implmentation to remove the Subscribe method,
+        /// but this avoids coupling the IDebuggable interface to the observer
+        /// pattern implemented by Device.
+        /// </summary>
+        /// <returns></returns>
+        List<string> IDebuggable.GetMethods()
+        {
+            Type thisType = GetType();
+            MethodInfo[] methods = thisType.GetMethods(
+                BindingFlags.Public |
+                BindingFlags.Static |
+                BindingFlags.Instance |
+                BindingFlags.DeclaredOnly
+            );
+            return methods.Select(method => method.Name)
+                .Where(name => !name.Equals("Subscribe")).ToList();
         }
 
         #endregion

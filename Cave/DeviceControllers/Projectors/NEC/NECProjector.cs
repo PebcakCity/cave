@@ -522,8 +522,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// Tries to power on the device, waiting until it's in an operable
         /// state, then tries to select the given <see cref="Input"/>.
         /// </summary>
-        /// <param name="input"></param>
-        /// <returns></returns>
+        /// <param name="input"><see cref="Input"/> or <see cref="System.String"/>
+        /// matching the <see cref="Input"/> name.</param>
         public override async Task PowerOnSelectInput( object input )
         {
             try
@@ -610,7 +610,6 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// according to the value of <paramref name="muted"/>.
         /// </summary>
         /// <param name="muted">True to mute the audio, false to unmute it.</param>
-        /// <returns></returns>
         /// <exception cref="NECProjectorCommandError">Thrown if the device
         /// fails to execute the command, such as when the device is in a
         /// state which prevents execution of that command.</exception>

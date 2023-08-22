@@ -42,6 +42,8 @@ namespace Cave.DeviceControllers.Televisions.Roku
             this.InputsAvailable = inputs ?? new List<string> { nameof(Input.InputTuner), nameof(Input.InputHDMI1) };
         }
 
+        #region Device methods
+
         /// <summary>
         /// Tries to connect to a Roku TV at the address and port specified in
         /// the constructor.  If successful, it calls <see cref="GetStatus"/> to
@@ -64,12 +66,30 @@ namespace Cave.DeviceControllers.Televisions.Roku
         }
 
         /// <summary>
+        /// Subscribes an <see cref="IObserver{T}"/> to this <see cref="IObservable{T}"/>
+        /// where <typeparamref name="T"/> is a <see cref="DeviceStatus"/> struct.
+        /// </summary>
+        /// <param name="observer"></param>
+        /// <returns>An <see cref="IDisposable"/> instance allowing the observer to
+        /// unsubscribe from this provider.</returns>
+        public override IDisposable Subscribe( IObserver<DeviceStatus> observer )
+        {
+            if ( !Observers.Contains(observer) )
+                Observers.Add(observer);
+            return new Unsubscriber(Observers, observer);
+        }
+
+        #endregion
+
+        #region Private helpers
+
+        /// <summary>
         /// Fetches current device state using ECP commands "/query/device-info"
         /// and "/query/media-player" and then publishes state changes to
         /// observers.
         /// </summary>
         /// <returns>A text string consisting of the XML output of the ECP
-        /// commands executed for device debugging purposes.</returns>
+        /// commands executed, returned for device debugging purposes.</returns>
         private async Task<string> GetStatus()
         {
             try
@@ -185,40 +205,14 @@ namespace Cave.DeviceControllers.Televisions.Roku
         }
 
         /// <summary>
-        /// Subscribes an <see cref="IObserver{T}"/> to this <see cref="IObservable{T}"/>
-        /// where <typeparamref name="T"/> is a <see cref="DeviceStatus"/> struct.
+        /// Simulates pressing a key/button on the TV remote.
         /// </summary>
-        /// <param name="observer"></param>
-        /// <returns>An <see cref="IDisposable"/> instance allowing the observer to
-        /// unsubscribe from this provider.</returns>
-        public override IDisposable Subscribe( IObserver<DeviceStatus> observer )
-        {
-            if ( ! Observers.Contains( observer ) )
-                Observers.Add( observer );
-            return new Unsubscriber(Observers, observer);
-        }
-
-        /// <summary>
-        /// Calls <see cref="GetStatus"/> to get the XML response of the ECP
-        /// commands "/query/device-info" and "/query/media-player" and returns
-        /// it for device troubleshooting/debugging purposes. 
-        /// </summary>
-        /// <returns>A string containing the XML responses.</returns>
-        public async Task<string> GetDebugInfo()
-        {
-            try
-            {
-                return await GetStatus();
-            }
-            catch{ throw; }
-        }        
-
-        /**
-         * Seems to me, maybe I should just make KeyPress public instead and
-         * call it directly from the app?  Everything is a keypress.
-         */
-
-        public async Task<HttpResponseMessage> KeyPress(string key, CancellationToken? token = null )
+        /// <param name="key">Key/button to press</param>
+        /// <param name="token">Cancellation token for cancelling the action</param>
+        /// <returns><see cref="HttpResponseMessage"/> containing the status
+        /// code and data.</returns>
+        /// <exception cref="HttpRequestException"></exception>
+        private async Task<HttpResponseMessage> KeyPress( string key, CancellationToken? token = null )
         {
             try
             {
@@ -240,6 +234,213 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
         }
 
+        #endregion
+
+        #region Television methods
+
+        /// <summary>
+        /// On Roku TV, this toggles media playback between play/pause states
+        /// </summary>
+        public override async Task Play()
+        {
+            try
+            {
+                await KeyPress("Play");
+            }
+            catch ( Exception ex )
+            {
+                foreach ( var observer in this.Observers )
+                    observer.OnError(ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Rewinds/reverses media playback
+        /// </summary>
+        public override async Task Reverse()
+        {
+            try
+            {
+                await KeyPress("Rev");
+            }
+            catch ( Exception ex )
+            {
+                foreach ( var observer in this.Observers )
+                    observer.OnError(ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Fast-forwards media playback
+        /// </summary>
+        public override async Task FastForward()
+        {
+            try
+            {
+                await KeyPress("Fwd");
+            }
+            catch ( Exception ex )
+            {
+                foreach ( var observer in this.Observers )
+                    observer.OnError(ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// On the tuner input, selects the next channel
+        /// </summary>
+        public override async Task ChannelUp()
+        {
+            try
+            {
+                await KeyPress("ChannelUp");
+            }
+            catch ( Exception ex )
+            {
+                foreach ( var observer in this.Observers )
+                    observer.OnError(ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// On the tuner input, selects the previous channel
+        /// </summary>
+        public override async Task ChannelDown()
+        {
+            try
+            {
+                await KeyPress("ChannelDown");
+            }
+            catch ( Exception ex )
+            {
+                foreach ( var observer in this.Observers )
+                    observer.OnError(ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Presses the up arrow on the TV remote
+        /// </summary>
+        public override async Task ArrowUp()
+        {
+            try
+            {
+                await KeyPress("Up");
+            }
+            catch ( Exception ex )
+            {
+                foreach ( var observer in this.Observers )
+                    observer.OnError(ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Pressed the down arrow on the TV remote
+        /// </summary>
+        public override async Task ArrowDown()
+        {
+            try
+            {
+                await KeyPress("Down");
+            }
+            catch ( Exception ex )
+            {
+                foreach ( var observer in this.Observers )
+                    observer.OnError(ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Presses the left arrow on the TV remote
+        /// </summary>
+        public override async Task ArrowLeft()
+        {
+            try
+            {
+                await KeyPress("Left");
+            }
+            catch ( Exception ex )
+            {
+                foreach ( var observer in this.Observers )
+                    observer.OnError(ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Presses the right arrow on the TV remote
+        /// </summary>
+        public override async Task ArrowRight()
+        {
+            try
+            {
+                await KeyPress("Right");
+            }
+            catch ( Exception ex )
+            {
+                foreach ( var observer in this.Observers )
+                    observer.OnError(ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Presses the back/return button on the remote to return to the
+        /// previous screen/area.  My Roku TV remote has two similar-looking
+        /// buttons, one sending the "Back" keypress bearing a left-facing
+        /// arrow, and one I've never used that I'm assuming is "InstantReplay"
+        /// bearing the typical counter-clockwise rotating arrow used for the
+        /// "Return" action on other TV/media player remotes.
+        /// </summary>
+        public override async Task GoBack()
+        {
+            try
+            {
+                await KeyPress("Back");
+            }
+            catch ( Exception ex )
+            {
+                foreach ( var observer in this.Observers )
+                    observer.OnError(ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Presses the "home" button on the remote to get back to the main
+        /// interface screen.  (Truth be told, I don't know how common this is
+        /// on TVs in general and this method might belong only on this class
+        /// instead of the Television abstract class.)  On Roku TV, this button
+        /// is labeled with an icon of a house and sends the "Home" keypress.
+        /// </summary>
+        public override async Task Home()
+        {
+            try
+            {
+                await KeyPress("Home");
+            }
+            catch ( Exception ex )
+            {
+                foreach ( var observer in this.Observers )
+                    observer.OnError(ex);
+                throw;
+            }
+        }
+
+        #endregion
+
+        #region Interface IDisplay
+
+        /// <summary>
+        /// Implements IDisplay.DisplayPowerOn(). Powers on the display.
+        /// </summary>
         public override async Task DisplayPowerOn()
         {
             try
@@ -256,6 +457,9 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
         }
 
+        /// <summary>
+        /// Implements IDisplay.DisplayPowerOff().  Powers off the display.
+        /// </summary>
         public override async Task DisplayPowerOff()
         {
             try
@@ -272,6 +476,18 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
         }
 
+        #endregion
+
+        #region Interface IInputSelectable
+
+        /// <summary>
+        /// Implements IInputSelectable.SelectInput().  Tries to select the
+        /// <see cref="Input"/> on the device matching the given object.
+        /// </summary>
+        /// <param name="obj"><see cref="Input"/> or <see cref="System.String"/>
+        /// matching the <see cref="Input"/> name.</param>
+        /// <exception cref="ArgumentException">Thrown if <paramref name="obj"/>
+        /// is neither a string nor <see cref="Input"/>.</exception>
         public override async Task SelectInput( object obj )
         {
             try
@@ -296,6 +512,17 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
         }
 
+        #endregion
+
+        #region Interface IDisplayInputSelectable
+
+        /// <summary>
+        /// Implements IDisplayInputSelectable.PowerOnSelectInput().
+        /// Powers on the device, waits one second, then tries to select the
+        /// <see cref="Input"/> represented by <paramref name="obj"/>.
+        /// </summary>
+        /// <param name="obj"><see cref="Input"/> or <see cref="System.String"/>
+        /// matching the <see cref="Input"/> name.</param>
         public override async Task PowerOnSelectInput( object obj )
         {
             try
@@ -307,6 +534,13 @@ namespace Cave.DeviceControllers.Televisions.Roku
             catch { throw; }
         }
 
+        #endregion
+
+        #region Interface IAudio
+
+        /// <summary>
+        /// Implements IAudio.AudioVolumeUp().  Increases the volume by one.
+        /// </summary>
         public override async Task AudioVolumeUp()
         {
             try
@@ -322,6 +556,9 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
         }
 
+        /// <summary>
+        /// Implements IAudio.AudioVolumeDown().  Decreases the volume by one.
+        /// </summary>
         public override async Task AudioVolumeDown()
         {
             try
@@ -338,7 +575,10 @@ namespace Cave.DeviceControllers.Televisions.Roku
         }
 
         /// <summary>
-        /// Toggles mute on/off.  {muted} parameter is ignored.
+        /// Implements IAudio.AudioMute().
+        /// Toggles mute on/off.  <paramref name="muted"/> parameter is ignored
+        /// for this class (and probably most TVs) as there is no apparent way
+        /// to retrieve mute state.
         /// </summary>
         /// <param name="muted">Ignored</param>
         /// <returns></returns>
@@ -360,160 +600,51 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
         }
 
-        public override async Task Play()
+        #endregion
+
+        #region Interface IDebuggable
+
+        /// <summary>
+        /// Calls <see cref="GetStatus"/> to get the XML response of the ECP
+        /// commands "/query/device-info" and "/query/media-player" and returns
+        /// it for device troubleshooting/debugging purposes. 
+        /// </summary>
+        /// <returns>A string containing the XML responses.</returns>
+        public async Task<string> GetDebugInfo()
         {
             try
             {
-                await KeyPress("Play");
+                return await GetStatus();
             }
-            catch ( Exception ex )
-            {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
-                throw;
-            }
+            catch { throw; }
         }
 
-        public override async Task Reverse()
+        #endregion
+
+        #region Extras
+
+        /// <summary>
+        /// To be used with IDebuggable interface.  Public version of the
+        /// helper method by the same name.  For pressing remote buttons
+        /// not already hardcoded into the Television interface.
+        /// </summary>
+        /// <param name="key">Key/button to press</param>
+        /// <returns><see cref="HttpResponseMessage"/> containing the status
+        /// code and data.</returns>
+        public async Task<HttpResponseMessage> KeyPress( string key )
         {
             try
             {
-                await KeyPress("Rev");
+                return await KeyPress(key, null);
             }
-            catch ( Exception ex )
-            {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
-                throw;
-            }
+            catch { throw; }
         }
 
-        public override async Task FastForward()
-        {
-            try
-            {
-                await KeyPress("Fwd");
-            }
-            catch ( Exception ex )
-            {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
-                throw;
-            }
-        }
-
-        public override async Task ChannelUp()
-        {
-            try
-            {
-                await KeyPress("ChannelUp");
-            }
-            catch ( Exception ex )
-            {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
-                throw;
-            }
-        }
-
-        public override async Task ChannelDown()
-        {
-            try
-            {
-                await KeyPress("ChannelDown");
-            }
-            catch ( Exception ex )
-            {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
-                throw;
-            }
-        }
-
-        public override async Task ArrowUp()
-        {
-            try
-            {
-                await KeyPress("Up");
-            }
-            catch ( Exception ex )
-            {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
-                throw;
-            }
-        }
-
-        public override async Task ArrowDown()
-        {
-            try
-            {
-                await KeyPress("Down");
-            }
-            catch ( Exception ex )
-            {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
-                throw;
-            }
-        }
-
-        public override async Task ArrowLeft()
-        {
-            try
-            {
-                await KeyPress("Left");
-            }
-            catch ( Exception ex )
-            {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
-                throw;
-            }
-        }
-
-        public override async Task ArrowRight()
-        {
-            try
-            {
-                await KeyPress("Right");
-            }
-            catch ( Exception ex )
-            {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
-                throw;
-            }
-        }
-
-        public override async Task GoBack()
-        {
-            try
-            {
-                await KeyPress("Back");
-            }
-            catch ( Exception ex )
-            {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
-                throw;
-            }
-        }
-
-        public override async Task Home()
-        {
-            try
-            {
-                await KeyPress("Home");
-            }
-            catch ( Exception ex )
-            {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
-                throw;
-            }
-        }
-
+        /// <summary>
+        /// To be used with IDebuggable interface.  For correcting problems
+        /// with misbehaving apps.  Should clear the device's app cache and
+        /// then power cycle it.
+        /// </summary>
         public async Task ClearCache()
         {
             try
@@ -535,5 +666,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
                 throw;
             }
         }
+
+        #endregion
     }
 }

@@ -1,26 +1,15 @@
-1. Changed IHasDebugInfo interface to IDebuggable and added methods for listing
-available device methods and executing arbitrary methods by name.  Need to write
-the parser that reads and executes the commands and add the UI bits to the glade
-file (then finally get around to doing the rest of the things in this todo list)
-
-The idea is to have a textbox in the DisplayTester app that allows one to enter
-a method to execute with the params, then have the app parse this string and
-execute it, so we can have a sort of "debugging session" with a device.  This
-theoretically lets us have any number of callable methods that troubleshoot
-devices without having a dedicated button for each and every one.  Eg. the
-ClearCache method I added for RokuTV.  We don't want a button for this because
-we don't want to accidentally press it.  It's for resetting the app cache to fix
-a misbehaving app. (Such as DisneyPlus repeatedly giving me an error code 73
-when I'm located in the US and not using a VPN... I had to look up how to clear
-the cache, then delete the app, then restart the TV and readd the app to fix it)
+1. DisplayTester is basically done for now.  Until I implement more controllers
+or think of some new must-have feature, I think it's time to go back to working
+on the other apps.  (DisplayTester could use a renaming maybe)
 
 --
 
-2. Clean up the controllers...
+2. Clean up the controllers... Did that (a little).  Reorganized & documented.
 
 --
 
-3. Clean up the apps...
+3. Clean up the apps... Will probably start fresh on CaveGtk (at some point).
+CaveBlazor needs straightened out.  Haven't looked at it in a while.
 
 --
 
@@ -102,25 +91,9 @@ async Task SelectSource(string sourceName)
     }
 }
 
---
-
-5. I may want to change Projector.InputsAvailable and its matching
-field in Television to be a Dictionary<string,string>.  This would allow a
-button to receive a "friendly name" to display, while the other string is the
-actual enumeration member name that corresponds to the input.  If I get the
-HomePage component worked out, then this might not be a big deal.  I had
-originally planned to have the "friendly names" appear on the HomePage like
-"Apple TV", etc. The DeviceController page was just going to show the actual
-input name. But it's all the same I suppose.  Maybe it wouldn't hurt to have
-the option?
-
-Side note: It might be useful to have a boolean flag for whether a device gets
-its own dedicated control page or not?  That's something to think about later.
-
-
 -------------------------------
 
-Things I'm trying to figure out:
+Things in the back of my mind:
 
 With the Blazor server app, how can we pass a list (or dictionary) of input
 names to a DeviceController component?  There are several ways to pass data from
@@ -176,10 +149,3 @@ public class AppConfig
 @inject AppConfig appConfig;
 
 ...
-
------------------------------------------------
-
-Other things to do / things to work on for fun:
-
-- Read up on various things: generics, delegates, etc
-

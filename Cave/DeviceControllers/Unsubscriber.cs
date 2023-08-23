@@ -6,9 +6,9 @@
     /// </summary>
     public class Unsubscriber : IDisposable
     {
-        private List<IObserver<DeviceStatus>> observers;
-        private IObserver<DeviceStatus> observer;
-        public Unsubscriber(List<IObserver<DeviceStatus>> observers, IObserver<DeviceStatus> observer)
+        private List<IObserver<DeviceInfo>> observers;
+        private IObserver<DeviceInfo> observer;
+        public Unsubscriber(List<IObserver<DeviceInfo>> observers, IObserver<DeviceInfo> observer)
         {
             this.observers = observers;
             this.observer = observer;

@@ -15,7 +15,7 @@ using Cave.Utils;
 
 namespace Cave.DisplayTester
 {
-    internal class MainWindow : Window, IObserver<DeviceStatus>
+    internal class MainWindow : Window, IObserver<DeviceInfo>
     {
         /* Top level */
         [UI] private Box BoxMainWindow = null;
@@ -97,7 +97,7 @@ namespace Cave.DisplayTester
             Initialize();
         }
 
-        public void Subscribe( IObservable<DeviceStatus> observable )
+        public void Subscribe( IObservable<DeviceInfo> observable )
         {
             if ( observable != null )
                 Unsubscriber = observable.Subscribe(this);
@@ -113,7 +113,7 @@ namespace Cave.DisplayTester
             this.Unsubscribe();
         }
 
-        public void OnNext( DeviceStatus status )
+        public void OnNext( DeviceInfo status )
         {
             this.DisplayMuted = status.DisplayMuted;
             this.AudioMuted = status.AudioMuted;

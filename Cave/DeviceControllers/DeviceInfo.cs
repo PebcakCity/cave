@@ -4,10 +4,10 @@ namespace Cave.DeviceControllers
 {
     /// <summary>
     /// A simple wrapper around any data we might be interested in passing to
-    /// any observer.  If a field is non-null, that should indicate that it's
-    /// part of what updated.
+    /// any observer.  If a nullable field is non-null, that should indicate
+    /// that it's part of what updated.
     /// </summary>
-    public struct DeviceStatus
+    public struct DeviceInfo
     {
         public string? ModelNumber { get; set; }
         public string? SerialNumber { get; set; }

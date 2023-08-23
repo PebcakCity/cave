@@ -5,7 +5,7 @@
 @using Cave.Interfaces
 	
 @inject IToastService ToastService
-@implements IObserver<DeviceStatus>
+@implements IObserver<DeviceInfo>
 
 <h1>Device Controller - @DeviceName</h1>
 @if ( DeviceReady )
@@ -17,8 +17,16 @@
 
     if ( Device is IInputSelectable iis )
     {
-        <button class="btn btn-primary" @onclick="@(() => SelectInput("RGB1"))">RGB1</button>
-        <button class="btn btn-primary" @onclick="@(() => SelectInput("HDMI1"))">HDMI1</button>
+        foreach( var input in TestInputs )
+        {
+            // Need to research the order of things getting set/instantiated in Blazor...
+            // Even though LastInputSelected is given a starting non-null value, trying
+            // to access it here without ? results in a null reference exception?
+            <button
+                class='btn @(LastInputSelected?.ToString() == input ? "btn-primary" : "btn-secondary")'
+                @onclick="@(() => SelectInput(input))"
+            >@input</button>
+        }
     }
 
     if ( Device is IDisplay display )
@@ -27,6 +35,10 @@
         <button class="btn btn-danger" @onclick="@DisplayPowerOff">Power Off</button>
         if ( display is IDisplayMutable idm )
         {
+            // If we ever switch back to nullable bool, this becomes
+            // ... class='btn @((DisplayMuted ?? false) ? "btn-secondary" : "btn-primary")'
+            // ... @onclick="@(() => DisplayMute(!(DisplayMuted ?? false)))"
+
             <button class="@(DisplayMuted ? "btn btn-secondary" : "btn btn-primary")" @onclick="@(() => DisplayMute(!DisplayMuted))">
                 Display mute on/off
             </button>
@@ -56,10 +68,10 @@ else
     #region Public fields / parameters
 
     [Parameter]
-    public string IpAddress { get; set; }
+    public string IpAddress { get; set; } = null;
 
     [Parameter]
-    public int Port { get; set; }
+    public int Port { get; set; } = 5000;
 
     [Parameter]
     public string DeviceName { get; set; } = "Device";
@@ -71,6 +83,8 @@ else
 
     #region Private fields
 
+    private List<string> TestInputs = new List<string> { "HDMI1", "RGB1" };
+
     private Device Device = null;
     private bool DeviceReady = false;
     private IDisposable Unsubscriber;
@@ -78,7 +92,7 @@ else
     private string ModelNumber;
     private string SerialNumber;
 
-    private string LastInputSelected;
+    private string LastInputSelected = "None";
     private bool DisplayMuted;
     private bool AudioMuted;
 
@@ -191,7 +205,7 @@ else
 
     #region Public methods
 
-    public void Subscribe( IObservable<DeviceStatus> observable )
+    public void Subscribe( IObservable<DeviceInfo> observable )
     {
         if ( observable != null )
             Unsubscriber = observable.Subscribe( this );
@@ -207,7 +221,7 @@ else
     /// our local data, then display the included message if present.
     /// </summary>
     /// <param name="status">DeviceStatus instance representing everything that changed</param>
-    public void OnNext( DeviceStatus status )
+    public void OnNext( DeviceInfo status )
     {
         if ( status.ModelNumber != null )
             this.ModelNumber = status.ModelNumber;

@@ -18,8 +18,8 @@ namespace Cave.DeviceControllers.Televisions.Roku
     {
         private HttpClient? Client = null;
         private static readonly Logger Logger = LogManager.GetLogger("RokuTV");
-        private DeviceStatus Status;
-        private List<IObserver<DeviceStatus>> Observers;
+        private DeviceInfo Info;
+        private List<IObserver<DeviceInfo>> Observers;
 
         /// <summary>
         /// Creates a new <see cref="RokuTV"/> object with the specified
@@ -39,7 +39,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             this.Name = deviceName;
             this.Address = address;
             this.Port = port;
-            this.Observers = new List<IObserver<DeviceStatus>>();
+            this.Observers = new List<IObserver<DeviceInfo>>();
             this.InputsAvailable = inputs ?? new List<string> { nameof(Input.InputTuner), nameof(Input.InputHDMI1) };
         }
 
@@ -47,7 +47,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
 
         /// <summary>
         /// Tries to connect to a Roku TV at the address and port specified in
-        /// the constructor.  If successful, it calls <see cref="GetStatus"/> to
+        /// the constructor.  If successful, it calls <see cref="GetDeviceInfo"/> to
         /// get some basic information from the device.
         /// </summary>
         public override async Task Initialize()
@@ -56,24 +56,24 @@ namespace Cave.DeviceControllers.Televisions.Roku
             {
                 Client = new HttpClient();
                 Client.BaseAddress = new Uri($"http://{this.Address}:{this.Port}");
-                await GetStatus();
+                await GetDeviceInfo();
                 Logger.Info("RokuTV Initialized");
             }
             catch ( Exception ex )
             {
-                Logger.Error($"RokuTV.{nameof(Initialize)} :: {ex.Message}");
+                Logger.Error($"{nameof(Initialize)} :: {ex.Message}");
                 throw;
             }
         }
 
         /// <summary>
         /// Subscribes an <see cref="IObserver{T}"/> to this <see cref="IObservable{T}"/>
-        /// where <typeparamref name="T"/> is a <see cref="DeviceStatus"/> struct.
+        /// where <typeparamref name="T"/> is a <see cref="DeviceInfo"/> struct.
         /// </summary>
         /// <param name="observer"></param>
         /// <returns>An <see cref="IDisposable"/> instance allowing the observer to
         /// unsubscribe from this provider.</returns>
-        public override IDisposable Subscribe( IObserver<DeviceStatus> observer )
+        public override IDisposable Subscribe( IObserver<DeviceInfo> observer )
         {
             if ( !Observers.Contains(observer) )
                 Observers.Add(observer);
@@ -86,29 +86,29 @@ namespace Cave.DeviceControllers.Televisions.Roku
 
         /// <summary>
         /// Fetches current device state using ECP commands "/query/device-info"
-        /// and "/query/media-player" and then publishes state changes to
-        /// observers.
+        /// and "/query/media-player" and then calls <see cref="NotifyObservers"/>
+        /// to publish whatever state information it finds to observers.
         /// </summary>
         /// <returns>A text string consisting of the XML output of the ECP
         /// commands executed, returned for device debugging purposes.</returns>
-        private async Task<string> GetStatus()
+        private async Task<string> GetDeviceInfo()
         {
             try
             {
                 CancellationTokenSource cts = new();
                 cts.CancelAfter(5000);
-                var deviceInfo = await GetDeviceInfo(cts.Token);
-                ParseDeviceInfo(deviceInfo);
+                var deviceInfo = await GetXmlDeviceInfo(cts.Token);
+                ParseXmlInfo(deviceInfo);
 
                 cts.CancelAfter(5000);
-                var mediaPlayerInfo = await GetMediaPlayerInfo(cts.Token);
+                var mediaPlayerInfo = await GetXmlMediaPlayerInfo(cts.Token);
                 
                 NotifyObservers();
                 return deviceInfo + "\n" + mediaPlayerInfo;
             }
             catch ( Exception ex )
             {
-                Logger.Error($"RokuTV.{nameof(GetStatus)} :: {ex.Message}");
+                Logger.Error($"{nameof(GetDeviceInfo)} :: {ex.Message}");
                 throw;
             }
         }
@@ -118,7 +118,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
         /// </summary>
         /// <returns>A text string containing the XML response of the command.
         /// </returns>
-        private async Task<string> GetDeviceInfo(CancellationToken token)
+        private async Task<string> GetXmlDeviceInfo(CancellationToken token)
         {
             try
             {
@@ -134,7 +134,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
         /// </summary>
         /// <returns>A text string containing the XML response of the command.
         /// </returns>
-        private async Task<string> GetMediaPlayerInfo(CancellationToken token)
+        private async Task<string> GetXmlMediaPlayerInfo(CancellationToken token)
         {
             try
             {
@@ -146,10 +146,10 @@ namespace Cave.DeviceControllers.Televisions.Roku
         }
 
         /// <summary>
-        /// Parses the XML response from <see cref="GetDeviceInfo"/> to update
+        /// Parses the XML response from <see cref="GetXmlDeviceInfo"/> to update
         /// device state.
         /// </summary>
-        private void ParseDeviceInfo(string? deviceInfo)
+        private void ParseXmlInfo(string? deviceInfo)
         {
             try
             {
@@ -163,15 +163,15 @@ namespace Cave.DeviceControllers.Televisions.Roku
                         switch ( reader.Name )
                         {
                             case "model-name":
-                                Status.ModelNumber = reader.ReadElementContentAsString();
+                                Info.ModelNumber = reader.ReadElementContentAsString();
                                 break;
                             case "serial-number":
-                                Status.SerialNumber = reader.ReadElementContentAsString();
+                                Info.SerialNumber = reader.ReadElementContentAsString();
                                 break;
                             case "power-mode":
                                 PowerState state;
                                 if ( PowerState.TryFromName(reader.ReadElementContentAsString(), out state) )
-                                    Status.PowerState = state;
+                                    Info.PowerState = state;
                                 break;
                             case "friendly-device-name":
                                 this.Name = reader.ReadElementContentAsString();
@@ -182,15 +182,15 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
             catch ( Exception ex )
             {
-                Logger.Error($"RokuTV.{nameof(ParseDeviceInfo)} :: {ex.Message}");
+                Logger.Error($"{nameof(ParseXmlInfo)} :: {ex.Message}");
                 throw;
             }
         }
 
         /// <summary>
-        /// Passes all current device state to observers, optionally passing a
-        /// message of the given <see cref="DeviceStatus.MessageType">MessageType</see>
-        /// (Info, Success, Warning, Error) as well.
+        /// Passes all gathered device state/info to observers, optionally
+        /// passing a message of the given <see cref="DeviceInfo.MessageType">
+        /// MessageType</see> (Info, Success, Warning, Error) as well.
         /// </summary>
         /// <param name="message">An optional message to display</param>
         /// <param name="type">The type or severity level of the message to display</param>
@@ -198,7 +198,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
         {
             foreach ( var observer in this.Observers )
             {
-                observer.OnNext(Status with { 
+                observer.OnNext(Info with { 
                     Message = message,
                     MessageType = type
                 });
@@ -211,8 +211,9 @@ namespace Cave.DeviceControllers.Televisions.Roku
         /// <param name="key">Key/button to press</param>
         /// <param name="token">Cancellation token for cancelling the action</param>
         /// <returns><see cref="HttpResponseMessage"/> containing the status
-        /// code and data.</returns>
-        /// <exception cref="HttpRequestException"></exception>
+        /// code and HTTP response.</returns>
+        /// <exception cref="HttpRequestException">Thrown if the status code
+        /// is anything but success (< 200 or > 299).</exception>
         private async Task<HttpResponseMessage> KeyPress( string key, CancellationToken? token = null )
         {
             try
@@ -230,7 +231,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
             catch ( Exception ex )
             {
-                Logger.Error($"RokuTV.{nameof(KeyPress)}({nameof(key)}) :: {ex.Message}");
+                Logger.Error($"{nameof(KeyPress)}({nameof(key)}) :: {ex.Message}");
                 throw;
             }
         }
@@ -240,6 +241,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
         #region Television methods
 
         /// <summary>
+        /// Sends the "Play" remote keycode.
         /// On Roku TV, this toggles media playback between play/pause states
         /// </summary>
         public override async Task Play()
@@ -257,6 +259,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
         }
 
         /// <summary>
+        /// Sends the "Rev" remote keycode.
         /// Rewinds/reverses media playback
         /// </summary>
         public override async Task Reverse()
@@ -274,6 +277,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
         }
 
         /// <summary>
+        /// Sends the "Fwd" remote keycode.
         /// Fast-forwards media playback
         /// </summary>
         public override async Task FastForward()
@@ -291,6 +295,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
         }
 
         /// <summary>
+        /// Sends the "ChannelUp" remote keycode.
         /// On the tuner input, selects the next channel
         /// </summary>
         public override async Task ChannelUp()
@@ -308,6 +313,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
         }
 
         /// <summary>
+        /// Sends the "ChannelDown" remote keycode.
         /// On the tuner input, selects the previous channel
         /// </summary>
         public override async Task ChannelDown()
@@ -325,7 +331,8 @@ namespace Cave.DeviceControllers.Televisions.Roku
         }
 
         /// <summary>
-        /// Presses the up arrow on the TV remote
+        /// Sends the "Up" remote keycode.
+        /// Navigates up in the user interface.
         /// </summary>
         public override async Task ArrowUp()
         {
@@ -342,7 +349,8 @@ namespace Cave.DeviceControllers.Televisions.Roku
         }
 
         /// <summary>
-        /// Pressed the down arrow on the TV remote
+        /// Sends the "Down" remote keycode.
+        /// Navigates down in the user interface.
         /// </summary>
         public override async Task ArrowDown()
         {
@@ -359,7 +367,8 @@ namespace Cave.DeviceControllers.Televisions.Roku
         }
 
         /// <summary>
-        /// Presses the left arrow on the TV remote
+        /// Sends the "Left" remote keycode.
+        /// Navigates left in the user interface.
         /// </summary>
         public override async Task ArrowLeft()
         {
@@ -376,7 +385,8 @@ namespace Cave.DeviceControllers.Televisions.Roku
         }
 
         /// <summary>
-        /// Presses the right arrow on the TV remote
+        /// Sends the "Right" remote keycode.
+        /// Navigates right in the user interface.
         /// </summary>
         public override async Task ArrowRight()
         {
@@ -393,12 +403,8 @@ namespace Cave.DeviceControllers.Televisions.Roku
         }
 
         /// <summary>
-        /// Presses the back/return button on the remote to return to the
-        /// previous screen/area.  My Roku TV remote has two similar-looking
-        /// buttons, one sending the "Back" keypress bearing a left-facing
-        /// arrow, and one I've never used that I'm assuming is "InstantReplay"
-        /// bearing the typical counter-clockwise rotating arrow used for the
-        /// "Return" action on other TV/media player remotes.
+        /// Sends the "Back" remote keycode.
+        /// Navigates backward through the user interface to the previous area.
         /// </summary>
         public override async Task GoBack()
         {
@@ -415,11 +421,12 @@ namespace Cave.DeviceControllers.Televisions.Roku
         }
 
         /// <summary>
-        /// Presses the "home" button on the remote to get back to the main
-        /// interface screen.  (Truth be told, I don't know how common this is
-        /// on TVs in general and this method might belong only on this class
-        /// instead of the Television abstract class.)  On Roku TV, this button
-        /// is labeled with an icon of a house and sends the "Home" keypress.
+        /// Sends the "Home" remote keycode.
+        /// Navigates to the home interface screen (Roku menu).  (Truth be
+        /// told, I don't know how common this is on TVs in general and this
+        /// method might belong only on this class instead of the Television
+        /// abstract class?)  On Roku TV, this button is labeled with an icon
+        /// of a house and sends the "Home" keypress.
         /// </summary>
         public override async Task Home()
         {
@@ -440,14 +447,15 @@ namespace Cave.DeviceControllers.Televisions.Roku
         #region Interface IDisplay
 
         /// <summary>
-        /// Implements IDisplay.DisplayPowerOn(). Powers on the display.
+        /// Implements <see cref="IDisplay.DisplayPowerOn"/>.
+        /// Powers on the display.
         /// </summary>
         public override async Task DisplayPowerOn()
         {
             try
             {
                 await KeyPress("PowerOn");
-                Status.PowerState = PowerState.PowerOn;
+                Info.PowerState = PowerState.PowerOn;
                 NotifyObservers("Power on", MessageType.Info);
             }
             catch ( Exception ex )
@@ -459,14 +467,15 @@ namespace Cave.DeviceControllers.Televisions.Roku
         }
 
         /// <summary>
-        /// Implements IDisplay.DisplayPowerOff().  Powers off the display.
+        /// Implements <see cref="IDisplay.DisplayPowerOff"/>.
+        /// Powers off the display.
         /// </summary>
         public override async Task DisplayPowerOff()
         {
             try
             {
                 await KeyPress("PowerOff");
-                Status.PowerState = PowerState.DisplayOff;
+                Info.PowerState = PowerState.DisplayOff;
                 NotifyObservers("Power off", MessageType.Info);
             }
             catch ( Exception ex )
@@ -482,8 +491,9 @@ namespace Cave.DeviceControllers.Televisions.Roku
         #region Interface IInputSelectable
 
         /// <summary>
-        /// Implements IInputSelectable.SelectInput().  Tries to select the
-        /// <see cref="Input"/> on the device matching the given object.
+        /// Implements <see cref="IInputSelectable.SelectInput"/>.
+        /// Tries to select the <see cref="Input"/> on the device matching the
+        /// given object.
         /// </summary>
         /// <param name="obj"><see cref="Input"/> or <see cref="System.String"/>
         /// matching the <see cref="Input"/> name.</param>
@@ -502,7 +512,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
                     throw new ArgumentException($"Invalid argument type {obj.GetType()}");
 
                 await KeyPress(input);
-                Status.InputSelected = input;
+                Info.InputSelected = input;
                 NotifyObservers($"Input '{input}' selected.", MessageType.Success);
             }
             catch ( Exception ex )
@@ -518,7 +528,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
         #region Interface IDisplayInputSelectable
 
         /// <summary>
-        /// Implements IDisplayInputSelectable.PowerOnSelectInput().
+        /// Implements <see cref="IDisplayInputSelectable.PowerOnSelectInput"/>.
         /// Powers on the device, waits one second, then tries to select the
         /// <see cref="Input"/> represented by <paramref name="obj"/>.
         /// </summary>
@@ -540,7 +550,8 @@ namespace Cave.DeviceControllers.Televisions.Roku
         #region Interface IAudio
 
         /// <summary>
-        /// Implements IAudio.AudioVolumeUp().  Increases the volume by one.
+        /// Implements <see cref="IAudio.AudioVolumeUp"/>.
+        /// Increases the volume by one.
         /// </summary>
         public override async Task AudioVolumeUp()
         {
@@ -558,7 +569,8 @@ namespace Cave.DeviceControllers.Televisions.Roku
         }
 
         /// <summary>
-        /// Implements IAudio.AudioVolumeDown().  Decreases the volume by one.
+        /// Implements <see cref="IAudio.AudioVolumeDown"/>.
+        /// Decreases the volume by one.
         /// </summary>
         public override async Task AudioVolumeDown()
         {
@@ -576,7 +588,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
         }
 
         /// <summary>
-        /// Implements IAudio.AudioMute().
+        /// Implements <see cref="IAudio.AudioMute"/>.
         /// Toggles mute on/off.  <paramref name="muted"/> parameter is ignored
         /// for this class (and probably most TVs) as there is no apparent way
         /// to retrieve mute state.
@@ -590,7 +602,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
                 await KeyPress("VolumeMute");
                 // Without the device reporting the state of audio muting,
                 // the best we can do is toggle the state on/off and hope it's right. 50/50
-                Status.AudioMuted = !Status.AudioMuted;
+                Info.AudioMuted = !Info.AudioMuted;
                 NotifyObservers();
             }
             catch ( Exception ex )
@@ -606,7 +618,8 @@ namespace Cave.DeviceControllers.Televisions.Roku
         #region Interface IDebuggable
 
         /// <summary>
-        /// Calls <see cref="GetStatus"/> to get the XML response of the ECP
+        /// Implements <see cref="IDebuggable.GetDebugInfo"/>.
+        /// Calls <see cref="GetDeviceInfo"/> to get the XML response of the ECP
         /// commands "/query/device-info" and "/query/media-player" and returns
         /// it for device troubleshooting/debugging purposes. 
         /// </summary>
@@ -615,17 +628,16 @@ namespace Cave.DeviceControllers.Televisions.Roku
         {
             try
             {
-                return await GetStatus();
+                return await GetDeviceInfo();
             }
             catch { throw; }
         }
 
         /// <summary>
-        /// Replaces the default implementation.  Amended to remove the
-        /// Subscribe() method from the list of callable methods.  I was going
-        /// to alter the default implmentation to remove the Subscribe method,
-        /// but this avoids coupling the IDebuggable interface to the observer
-        /// pattern implemented by Device.
+        /// Implements <see cref="IDebuggable.GetMethods"/>.
+        /// Replaces the default implementation.  Remove's the
+        /// <see cref="Device"/>'s <see cref="IObservable{T}.Subscribe"/>
+        /// method from the list of methods callable by the debugging interface.
         /// </summary>
         /// <returns></returns>
         List<string> IDebuggable.GetMethods()
@@ -647,12 +659,12 @@ namespace Cave.DeviceControllers.Televisions.Roku
 
         /// <summary>
         /// To be used with IDebuggable interface.  Public version of the
-        /// helper method by the same name.  For pressing remote buttons
-        /// not already hardcoded into the Television interface.
+        /// private helper method by the same name.  For pressing remote
+        /// buttons not already hardcoded into the Television interface.
         /// </summary>
         /// <param name="key">Key/button to press</param>
         /// <returns><see cref="HttpResponseMessage"/> containing the status
-        /// code and data.</returns>
+        /// code and HTTP response.</returns>
         public async Task<HttpResponseMessage> KeyPress( string key )
         {
             try

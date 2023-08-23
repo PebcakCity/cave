@@ -28,7 +28,7 @@ the button click event and maybe the MainWindow's show (?) event.
 
 namespace CaveGtk
 {
-    internal class MainWindow : Window, IObserver<DeviceStatus>
+    internal class MainWindow : Window, IObserver<DeviceInfo>
     {
         [UI] private Button _btn1 = null;
         [UI] private Button _btn2 = null;
@@ -77,7 +77,7 @@ namespace CaveGtk
             Application.Quit();
         }
 
-        public void Subscribe( IObservable<DeviceStatus> observable )
+        public void Subscribe( IObservable<DeviceInfo> observable )
         {
             if ( observable != null )
                 Unsubscriber = observable.Subscribe( this );
@@ -88,7 +88,7 @@ namespace CaveGtk
             Unsubscriber?.Dispose();
         }
 
-        public void OnNext( DeviceStatus status )
+        public void OnNext( DeviceInfo status )
         {
             var message = "";
 

@@ -15,8 +15,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
     {
         private Client? Client = null;
         private static readonly Logger Logger = LogManager.GetLogger("NECProjector");
-        private DeviceStatus Status;
-        private List<IObserver<DeviceStatus>> Observers;
+        private DeviceInfo Info;
+        private List<IObserver<DeviceInfo>> Observers;
 
         /// <summary>
         /// Creates a new <see cref="NECProjector"/> object with the specified
@@ -36,7 +36,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             this.Name = deviceName;
             this.Address = address;
             this.Port = port;
-            this.Observers = new List<IObserver<DeviceStatus>>();
+            this.Observers = new List<IObserver<DeviceInfo>>();
             this.InputsAvailable = inputs ?? new List<string> { nameof(Input.RGB1), nameof(Input.HDMI1) };
         }
 
@@ -47,7 +47,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// device at the address and port given in the constructor.  If successful,
         /// attempts to retrieve the model number, serial number, and lamp life
         /// information and then calls <see cref="NotifyObservers"/> to pass that
-        /// gathered data back to the application instantiating this device controller.
+        /// gathered data back to observers (such as the application instantiating
+        /// this device controller.)
         /// </summary>
         public override async Task Initialize()
         {
@@ -59,6 +60,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 await GetSerialNumber();
                 await GetLampInfo(LampInfo.GoodForSeconds);
                 await GetLampInfo(LampInfo.UsageTimeSeconds);
+                Logger.Info("NECProjector Initialized");
 
                 NotifyObservers();
             }
@@ -70,12 +72,12 @@ namespace Cave.DeviceControllers.Projectors.NEC
 
         /// <summary>
         /// Subscribes an <see cref="IObserver{T}"/> to this <see cref="IObservable{T}"/>
-        /// where <typeparamref name="T"/> is a <see cref="DeviceStatus"/> struct.
+        /// where <typeparamref name="T"/> is a <see cref="DeviceInfo"/> struct.
         /// </summary>
         /// <param name="observer"></param>
         /// <returns>An <see cref="IDisposable"/> instance allowing the observer to
         /// unsubscribe from this provider.</returns>
-        public override IDisposable Subscribe( IObserver<DeviceStatus> observer )
+        public override IDisposable Subscribe( IObserver<DeviceInfo> observer )
         {
             if ( !Observers.Contains(observer) )
                 Observers.Add(observer);
@@ -87,11 +89,12 @@ namespace Cave.DeviceControllers.Projectors.NEC
         #region Private helpers
 
         /// <summary>
-        /// Fetches current device state, stores it in private fields, and
-        /// calls <see cref="NotifyObservers"/> to pass that stored state to
+        /// Fetches current device state, stores it in our
+        /// <see cref="DeviceInfo"/> struct, and calls
+        /// <see cref="NotifyObservers"/> to pass a copy of that struct to
         /// observers.
         /// </summary>
-        private async Task GetStatus()
+        private async Task GetDeviceInfo()
         {
             try
             {
@@ -99,11 +102,11 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 if ( response.IndicatesFailure )
                     throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
 
-                Status.PowerState = PowerState.FromValue(response.Data[6]);
+                Info.PowerState = PowerState.FromValue(response.Data[6]);
                 var inputTuple = (response.Data[8], response.Data[9]);
-                Status.InputSelected = InputStates.GetValueOrDefault(inputTuple);
-                Status.DisplayMuted = (response.Data[11] == 0x01);
-                Status.AudioMuted = (response.Data[12] == 0x01);
+                Info.InputSelected = InputStates.GetValueOrDefault(inputTuple);
+                Info.DisplayMuted = (response.Data[11] == 0x01);
+                Info.AudioMuted = (response.Data[12] == 0x01);
                 // Get lamp hours if device has a lamp
                 await GetLampInfo(LampInfo.UsageTimeSeconds);
 
@@ -111,16 +114,16 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
             catch ( Exception ex )
             {
-                Logger.Error($"NECProjector.{nameof(GetStatus)} :: {ex}");
+                Logger.Error($"{nameof(GetDeviceInfo)} :: {ex}");
                 throw;
             }
         }
 
 
         /// <summary>
-        /// Passes all current device state to observers, optionally passing a
-        /// message of the given <see cref="DeviceStatus.MessageType">MessageType</see>
-        /// (Info, Success, Warning, Error) as well.
+        /// Passes all gathered device state/info to observers, optionally
+        /// passing a message of the given <see cref="DeviceInfo.MessageType">
+        /// MessageType</see> (Info, Success, Warning, Error) as well.
         /// </summary>
         /// <param name="message">An optional message to display</param>
         /// <param name="type">The type or severity level of the message to display</param>
@@ -128,7 +131,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         {
             foreach ( var observer in this.Observers )
             {
-                observer.OnNext(Status with {
+                observer.OnNext(Info with {
                     Message = message,
                     MessageType = type
                 });
@@ -136,50 +139,53 @@ namespace Cave.DeviceControllers.Projectors.NEC
         }
 
         /// <summary>
-        /// Gets the requested lamp information and stores it for later use by
-        /// <see cref="NotifyObservers"/>.  If the command triggers a
+        /// Gets the requested lamp information and stores it in our
+        /// <see cref="DeviceInfo"/> struct so that <see cref="NotifyObservers"/>
+        /// will push lamp info/state to observers. If the command triggers a
         /// <see cref="NECProjectorCommandError"/> (most likely due to the
-        /// device being of a lampless design), all lamp information values
-        /// are set to -1.
+        /// device being of a lampless design), all lamp information values are
+        /// set to -1.
         /// </summary>
-        /// <param name="info">NEC.LampInfo member corresponding to the
-        /// requested data</param>
-        /// <returns>The exact value reported by the device as an <see cref="System.Int32"/></returns>
-        private async Task<int> GetLampInfo(LampInfo info)
+        /// <param name="lampInfo"><see cref="LampInfo"/> member corresponding
+        /// to the requested data</param>
+        /// <returns>The exact value reported by the device as an
+        /// <see cref="int"/></returns>
+        private async Task<int> GetLampInfo(LampInfo lampInfo)
         {
             try
             {
-                var response = await Client!.SendCommandAsync(Command.GetLampInfo.Prepare(0x00, (byte)info));
+                var response = await Client!.SendCommandAsync(Command.GetLampInfo.Prepare(0x00, (byte)lampInfo));
                 if ( response.IndicatesFailure )
                     throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
 
                 int value = BitConverter.ToInt32(response.Data[7..11], 0);
-                switch ( info )
+                switch ( lampInfo )
                 {
                     case LampInfo.GoodForSeconds:
-                        Status.LampHoursTotal = (int)Math.Floor((double)value/3600);
+                        Info.LampHoursTotal = (int)Math.Floor((double)value/3600);
                         break;
                     case LampInfo.UsageTimeSeconds:
-                        Status.LampHoursUsed = (int)Math.Floor((double)value/3600);
+                        Info.LampHoursUsed = (int)Math.Floor((double)value/3600);
                         break;
                 }
                 return value;
             }
             catch( NECProjectorCommandError )
             {
-                Status.LampHoursTotal = Status.LampHoursUsed = -1;
+                Info.LampHoursTotal = Info.LampHoursUsed = -1;
                 return -1;
             }
             catch( Exception ex )
             {
-                Logger.Error($"NECProjector.{nameof(GetLampInfo)} :: {ex}");
+                Logger.Error($"{nameof(GetLampInfo)} :: {ex}");
                 throw;
             }
         }
 
         /// <summary>
-        /// Gets the projector's model number and stores it for later use by
-        /// <see cref="NotifyObservers"/>.
+        /// Gets the projector's model number and stores it in our
+        /// <see cref="DeviceInfo"/> struct so that <see cref="NotifyObservers"/>
+        /// will push model information to observers.
         /// </summary>
         /// <returns>The model number as a string.</returns>
         private async Task<string> GetModelNumber()
@@ -188,19 +194,20 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await Client!.SendCommandAsync(Command.GetModelNumber);
                 var data = response.Data[5..37];
-                Status.ModelNumber = Encoding.UTF8.GetString(data).TrimEnd('\0');
-                return Status.ModelNumber;
+                Info.ModelNumber = Encoding.UTF8.GetString(data).TrimEnd('\0');
+                return Info.ModelNumber;
             }
             catch ( Exception ex )
             {
-                Logger.Error($"NECProjector.{nameof(GetModelNumber)} :: {ex}");
+                Logger.Error($"{nameof(GetModelNumber)} :: {ex}");
                 throw;
             }
         }
 
         /// <summary>
-        /// Gets the projector's serial number and stores it for later use by
-        /// <see cref="NotifyObservers"/>.
+        /// Gets the projector's serial number and stores it in our
+        /// <see cref="DeviceInfo"/> struct so that <see cref="NotifyObservers"/>
+        /// will push it to observers.
         /// </summary>
         /// <returns>The serial number as a string.</returns>
         private async Task<string> GetSerialNumber()
@@ -209,12 +216,12 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await Client!.SendCommandAsync(Command.GetSerialNumber);
                 var data = response.Data[7..23];
-                Status.SerialNumber = Encoding.UTF8.GetString(data).TrimEnd('\0');
-                return Status.SerialNumber;
+                Info.SerialNumber = Encoding.UTF8.GetString(data).TrimEnd('\0');
+                return Info.SerialNumber;
             }
             catch ( Exception ex )
             {
-                Logger.Error($"NECProjector.{nameof(GetSerialNumber)} :: {ex}");
+                Logger.Error($"{nameof(GetSerialNumber)} :: {ex}");
                 throw;
             }
         }
@@ -222,7 +229,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// <summary>
         /// Gets a list of <see cref="NECProjectorError"/> instances representing
         /// the errors this projector is currently reporting.  Optionally logs
-        /// those errors as warnings with NLog.
+        /// those errors as warnings with the logging platform.
         /// </summary>
         /// <param name="logErrors">Whether to log the errors.</param>
         /// <returns>The list of <see cref="NECProjectorError"/>instances reported.</returns>
@@ -242,7 +249,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
             catch ( Exception ex )
             {
-                Logger.Error($"NECProjector.{nameof(GetErrors)} :: {ex}");
+                Logger.Error($"{nameof(GetErrors)} :: {ex}");
                 throw;
             }
         }
@@ -341,8 +348,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
         {
             try
             {
-                await GetStatus();
-                return Status.PowerState;
+                await GetDeviceInfo();
+                return Info.PowerState;
             }
             catch ( Exception ex )
             {
@@ -360,8 +367,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
         {
             try
             {
-                await GetStatus();
-                return Status.InputSelected;
+                await GetDeviceInfo();
+                return Info.InputSelected;
             }
             catch ( Exception ex )
             {
@@ -377,10 +384,11 @@ namespace Cave.DeviceControllers.Projectors.NEC
         #region interface IDisplay
 
         /// <summary>
-        /// Implements IDisplay.DisplayPowerOn().  Tries to power on the display
-        /// using a cancellable awaitable power on operation which reports
-        /// <see cref="PowerState"/> transitions to the calling application
-        /// until the device is powered on.
+        /// Implements <see cref="IDisplay.DisplayPowerOn"/>.
+        /// Tries to power on the display using a cancellable awaitable power
+        /// on operation which reports <see cref="PowerState"/> transitions to
+        /// observers until the device is either successfully powered on or
+        /// fails to power on.
         /// </summary>
         public override async Task DisplayPowerOn()
         {
@@ -399,8 +407,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
         }
 
         /// <summary>
-        /// Implements IDisplay.DisplayPowerOff().  Tries to powers off the
-        /// display.
+        /// Implements <see cref="IDisplay.DisplayPowerOff"/>.
+        /// Tries to powers off the display.
         /// </summary>
         /// <exception cref="NECProjectorCommandError">Thrown if the device
         /// fails to execute the command, such as when the device is in a
@@ -426,6 +434,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         #region interface IDisplayMutable
 
         /// <summary>
+        /// Implements <see cref="IDisplayMutable.DisplayMute"/>.
         /// Tries to set the display muting state of the device to on or off
         /// according to the value of <paramref name="muted"/>.
         /// </summary>
@@ -441,7 +450,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 if ( response.IndicatesFailure )
                     throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
 
-                Status.DisplayMuted = muted;
+                Info.DisplayMuted = muted;
                 NotifyObservers(string.Format("Video mute {0}", ( muted ? "ON" : "OFF" )));
             }
             catch ( Exception ex )
@@ -453,6 +462,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         }
 
         /// <summary>
+        /// Implements <see cref="IDisplayMutable.DisplayIsMuted"/>.
         /// Gets whether the device's display is currently muted or not.
         /// </summary>
         /// <returns>True if the display is muted, false if not.</returns>
@@ -460,8 +470,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
         {
             try
             {
-                await GetStatus();
-                return Status.DisplayMuted;
+                await GetDeviceInfo();
+                return Info.DisplayMuted;
             }
             catch ( Exception ex )
             {
@@ -476,13 +486,15 @@ namespace Cave.DeviceControllers.Projectors.NEC
         #region interface IInputSelectable
 
         /// <summary>
+        /// Implements <see cref="IInputSelectable.SelectInput"/>.
         /// Tries to select the <see cref="Input"/> on the device matching the
         /// given object.
         /// </summary>
         /// <param name="obj"><see cref="Input"/> or <see cref="System.String"/>
         /// matching the <see cref="Input"/> name.</param>
         /// <exception cref="ArgumentException">Thrown if <paramref name="obj"/>
-        /// is neither a string nor <see cref="Input"/>.</exception>
+        /// is neither a <see cref="System.String"/> nor <see cref="Input"/>.
+        /// </exception>
         /// <exception cref="NECProjectorCommandError">Thrown if the device
         /// fails to execute the command, such as when the device is in a
         /// state which prevents execution of that command.</exception>
@@ -504,7 +516,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 if ( response.IndicatesFailure )
                     throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
 
-                Status.InputSelected = input;
+                Info.InputSelected = input;
                 NotifyObservers($"Input '{input}' selected.", MessageType.Success);
             }
             catch ( Exception ex )
@@ -520,6 +532,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         #region interface IDisplayInputSelectable
 
         /// <summary>
+        /// Implements <see cref="IDisplayInputSelectable.PowerOnSelectInput"/>.
         /// Tries to power on the device, waiting until it's in an operable
         /// state, then tries to select the given <see cref="Input"/>.
         /// </summary>
@@ -548,6 +561,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         #region interface IAudio
 
         /// <summary>
+        /// Implements <see cref="IAudio.AudioVolumeUp"/>.
         /// Tries to increase the audio volume by 1 unit.
         /// </summary>
         /// <exception cref="NECProjectorCommandError">Thrown if the device
@@ -574,13 +588,16 @@ namespace Cave.DeviceControllers.Projectors.NEC
         }
 
         /// <summary>
+        /// Implements <see cref="IAudio.AudioVolumeDown"/>.
         /// Tries to decrease the audio volume by 1 unit.
-        /// Not really a high priority to get this one working right now.
-        /// I might just leave both volume controls unimplemented.
         /// </summary>
         /// <exception cref="NECProjectorCommandError">Thrown if the device
         /// fails to execute the command, such as when the device is in a
         /// state which prevents execution of that command.</exception>
+        /// <remarks>Does not work.  The NEC documentation is unclear (to me)
+        /// as to how to decrease the volume.  Not a high priority to solve
+        /// right now given how infrequently we use the audio functionality on
+        /// our projectors but maybe someone can figure this out?</remarks>
         public async override Task AudioVolumeDown()
         {
             try
@@ -607,6 +624,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         }
 
         /// <summary>
+        /// Implements <see cref="IAudio.AudioMute"/>.
         /// Tries to set the audio muting state of the device to on or off
         /// according to the value of <paramref name="muted"/>.
         /// </summary>
@@ -622,7 +640,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 if ( response.IndicatesFailure )
                     throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
 
-                Status.AudioMuted = muted;
+                Info.AudioMuted = muted;
                 NotifyObservers(string.Format("Audio mute {0}", ( muted ? "ON" : "OFF" )));
             }
             catch ( Exception ex )
@@ -634,6 +652,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         }
 
         /// <summary>
+        /// Implements <see cref="IAudio.AudioIsMuted"/>.
         /// Gets whether the device's audio is currently muted or not.
         /// </summary>
         /// <returns>True if the audio is muted, false if not.</returns>
@@ -641,8 +660,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
         {
             try
             {
-                await GetStatus();
-                return Status.AudioMuted;
+                await GetDeviceInfo();
+                return Info.AudioMuted;
             }
             catch ( Exception ex )
             {
@@ -657,6 +676,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         #region interface IDebuggable
 
         /// <summary>
+        /// Implements <see cref="IDebuggable.GetDebugInfo"/>.
         /// Gets a string containing information (device name, address, current
         /// device state, errors reported) that we want to be able to display
         /// in an application for device debugging purposes.
@@ -664,21 +684,21 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// <returns>A string containing information about the device and its state.</returns>
         public async Task<string> GetDebugInfo()
         {
-            await GetStatus();
+            await GetDeviceInfo();
             string debugInfo = string.Empty;
             debugInfo += $"Device name: {this.Name}\n"
                 + $"Address: {this.Address}:{this.Port}\n"
-                + $"Model: {Status.ModelNumber}\n"
-                + $"Serial #: {Status.SerialNumber}\n"
-                + $"Power state: {Status.PowerState}\n"
-                + $"Input selected: {Status.InputSelected}\n";
-            debugInfo += "Video mute: " + ( ( Status.DisplayMuted==true ) ? "on" : "off" ) + "\n";
-            debugInfo += "Audio mute: " + ( ( Status.AudioMuted==true ) ? "on" : "off" ) + "\n";
+                + $"Model: {Info.ModelNumber}\n"
+                + $"Serial #: {Info.SerialNumber}\n"
+                + $"Power state: {Info.PowerState}\n"
+                + $"Input selected: {Info.InputSelected}\n";
+            debugInfo += "Video mute: " + ( ( Info.DisplayMuted==true ) ? "on" : "off" ) + "\n";
+            debugInfo += "Audio mute: " + ( ( Info.AudioMuted==true ) ? "on" : "off" ) + "\n";
 
-            if ( Status.LampHoursUsed > -1 && Status.LampHoursTotal > 0 )
+            if ( Info.LampHoursUsed > -1 && Info.LampHoursTotal > 0 )
             {
-                int percentRemaining = 100 - (int)Math.Floor((double)Status.LampHoursUsed/(double)Status.LampHoursTotal*100.0);
-                debugInfo += $"Lamp hours used: {Status.LampHoursUsed} / {Status.LampHoursTotal} ({percentRemaining}% life remaining)\n";
+                int percentRemaining = 100 - (int)Math.Floor((double)Info.LampHoursUsed/(double)Info.LampHoursTotal*100.0);
+                debugInfo += $"Lamp hours used: {Info.LampHoursUsed} / {Info.LampHoursTotal} ({percentRemaining}% life remaining)\n";
             }
 
             var errors = await GetErrors();
@@ -692,11 +712,10 @@ namespace Cave.DeviceControllers.Projectors.NEC
         }
 
         /// <summary>
-        /// Replaces the default implementation.  Amended to remove the
-        /// Subscribe() method from the list of callable methods.  I was going
-        /// to alter the default implmentation to remove the Subscribe method,
-        /// but this avoids coupling the IDebuggable interface to the observer
-        /// pattern implemented by Device.
+        /// Implements <see cref="IDebuggable.GetMethods"/>.
+        /// Replaces the default implementation.  Remove's the
+        /// <see cref="Device"/>'s <see cref="IObservable{T}.Subscribe"/>
+        /// method from the list of methods callable by the debugging interface.
         /// </summary>
         /// <returns></returns>
         List<string> IDebuggable.GetMethods()

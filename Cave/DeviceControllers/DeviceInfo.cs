@@ -15,8 +15,8 @@ namespace Cave.DeviceControllers
         public int? LampHoursUsed { get; set; }
         public object? PowerState { get; set; }
         public object? InputSelected { get; set; }
-        public bool DisplayMuted { get; set; }
-        public bool AudioMuted { get; set; }
+        public bool IsDisplayMuted { get; set; }
+        public bool IsAudioMuted { get; set; }
         public string? Message { get; set; }
         public MessageType MessageType { get; set; }
     }

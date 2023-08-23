@@ -5,6 +5,6 @@ namespace Cave.Interfaces
         Task AudioVolumeUp();
         Task AudioVolumeDown();
         Task AudioMute(bool muted);
-        Task<bool> AudioIsMuted();
+        Task<bool> IsAudioMuted();
     }
 }

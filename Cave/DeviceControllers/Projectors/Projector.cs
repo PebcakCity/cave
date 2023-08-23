@@ -17,13 +17,13 @@ namespace Cave.DeviceControllers.Projectors
 
         /* IDisplayMutable */
         public virtual Task DisplayMute( bool muted ) { throw new NotImplementedException(); }
-        public virtual Task<bool> DisplayIsMuted() { throw new NotImplementedException(); }
+        public virtual Task<bool> IsDisplayMuted() { throw new NotImplementedException(); }
 
         /* IAudio */
         public virtual Task AudioVolumeUp() { throw new NotImplementedException(); }
         public virtual Task AudioVolumeDown() { throw new NotImplementedException(); }
         public virtual Task AudioMute(bool muted) { throw new NotImplementedException(); }
-        public virtual Task<bool> AudioIsMuted() { throw new NotImplementedException(); }
+        public virtual Task<bool> IsAudioMuted() { throw new NotImplementedException(); }
 
         /* Projector */
         public virtual Task<object?> GetPowerState() { throw new NotImplementedException(); }

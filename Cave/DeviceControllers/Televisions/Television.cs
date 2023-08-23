@@ -18,7 +18,7 @@ namespace Cave.DeviceControllers.Televisions
         public virtual Task AudioVolumeUp() { throw new NotImplementedException(); }
         public virtual Task AudioVolumeDown() { throw new NotImplementedException(); }
         public virtual Task AudioMute( bool muted ) { throw new NotImplementedException(); }
-        public virtual Task<bool> AudioIsMuted() { throw new NotImplementedException(); }
+        public virtual Task<bool> IsAudioMuted() { throw new NotImplementedException(); }
 
         /* Television */
         public virtual Task Play() { throw new NotImplementedException(); }

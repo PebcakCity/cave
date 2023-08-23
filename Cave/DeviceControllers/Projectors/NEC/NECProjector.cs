@@ -105,8 +105,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 Info.PowerState = PowerState.FromValue(response.Data[6]);
                 var inputTuple = (response.Data[8], response.Data[9]);
                 Info.InputSelected = InputStates.GetValueOrDefault(inputTuple);
-                Info.DisplayMuted = (response.Data[11] == 0x01);
-                Info.AudioMuted = (response.Data[12] == 0x01);
+                Info.IsDisplayMuted = (response.Data[11] == 0x01);
+                Info.IsAudioMuted = (response.Data[12] == 0x01);
                 // Get lamp hours if device has a lamp
                 await GetLampInfo(LampInfo.UsageTimeSeconds);
 
@@ -450,7 +450,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 if ( response.IndicatesFailure )
                     throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
 
-                Info.DisplayMuted = muted;
+                Info.IsDisplayMuted = muted;
                 NotifyObservers(string.Format("Video mute {0}", ( muted ? "ON" : "OFF" )));
             }
             catch ( Exception ex )
@@ -462,16 +462,16 @@ namespace Cave.DeviceControllers.Projectors.NEC
         }
 
         /// <summary>
-        /// Implements <see cref="IDisplayMutable.DisplayIsMuted"/>.
+        /// Implements <see cref="IDisplayMutable.IsDisplayMuted"/>.
         /// Gets whether the device's display is currently muted or not.
         /// </summary>
         /// <returns>True if the display is muted, false if not.</returns>
-        public override async Task<bool> DisplayIsMuted()
+        public override async Task<bool> IsDisplayMuted()
         {
             try
             {
                 await GetDeviceInfo();
-                return Info.DisplayMuted;
+                return Info.IsDisplayMuted;
             }
             catch ( Exception ex )
             {
@@ -640,7 +640,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 if ( response.IndicatesFailure )
                     throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
 
-                Info.AudioMuted = muted;
+                Info.IsAudioMuted = muted;
                 NotifyObservers(string.Format("Audio mute {0}", ( muted ? "ON" : "OFF" )));
             }
             catch ( Exception ex )
@@ -652,16 +652,16 @@ namespace Cave.DeviceControllers.Projectors.NEC
         }
 
         /// <summary>
-        /// Implements <see cref="IAudio.AudioIsMuted"/>.
+        /// Implements <see cref="IAudio.IsAudioMuted"/>.
         /// Gets whether the device's audio is currently muted or not.
         /// </summary>
         /// <returns>True if the audio is muted, false if not.</returns>
-        public async override Task<bool> AudioIsMuted()
+        public async override Task<bool> IsAudioMuted()
         {
             try
             {
                 await GetDeviceInfo();
-                return Info.AudioMuted;
+                return Info.IsAudioMuted;
             }
             catch ( Exception ex )
             {
@@ -692,8 +692,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 + $"Serial #: {Info.SerialNumber}\n"
                 + $"Power state: {Info.PowerState}\n"
                 + $"Input selected: {Info.InputSelected}\n";
-            debugInfo += "Video mute: " + ( ( Info.DisplayMuted==true ) ? "on" : "off" ) + "\n";
-            debugInfo += "Audio mute: " + ( ( Info.AudioMuted==true ) ? "on" : "off" ) + "\n";
+            debugInfo += "Video mute: " + ( ( Info.IsDisplayMuted==true ) ? "on" : "off" ) + "\n";
+            debugInfo += "Audio mute: " + ( ( Info.IsAudioMuted==true ) ? "on" : "off" ) + "\n";
 
             if ( Info.LampHoursUsed > -1 && Info.LampHoursTotal > 0 )
             {

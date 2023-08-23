@@ -602,7 +602,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
                 await KeyPress("VolumeMute");
                 // Without the device reporting the state of audio muting,
                 // the best we can do is toggle the state on/off and hope it's right. 50/50
-                Info.AudioMuted = !Info.AudioMuted;
+                Info.IsAudioMuted = !Info.IsAudioMuted;
                 NotifyObservers();
             }
             catch ( Exception ex )

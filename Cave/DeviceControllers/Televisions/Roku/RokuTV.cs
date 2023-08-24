@@ -229,7 +229,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
 
         /// <summary>
         /// Passes all gathered device state/info to observers, optionally
-        /// passing a message of the given <see cref="DeviceInfo.MessageType">
+        /// passing a message of the given <see cref="MessageType">
         /// MessageType</see> (Info, Success, Warning, Error) as well.
         /// </summary>
         /// <param name="message">An optional message to display</param>

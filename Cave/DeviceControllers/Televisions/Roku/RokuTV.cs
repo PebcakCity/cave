@@ -86,25 +86,32 @@ namespace Cave.DeviceControllers.Televisions.Roku
 
         /// <summary>
         /// Fetches current device state using ECP commands "/query/device-info"
-        /// and "/query/media-player" and then calls <see cref="NotifyObservers"/>
-        /// to publish whatever state information it finds to observers.
+        /// and "/query/media-player", parses these responses for state info
+        /// and then calls <see cref="NotifyObservers"/> to publish the state
+        /// info to observers.
         /// </summary>
-        /// <returns>A text string consisting of the XML output of the ECP
-        /// commands executed, returned for device debugging purposes.</returns>
-        private async Task<string> GetDeviceInfo()
+        private async Task GetDeviceInfo()
         {
             try
             {
-                CancellationTokenSource cts = new();
-                cts.CancelAfter(5000);
-                var deviceInfo = await GetXmlDeviceInfo(cts.Token);
-                ParseXmlInfo(deviceInfo);
+                // Changes/todo: 
+                //1. Incorporate the play/pause state info like I have been thinking about? DONE
+                //2. ParseXmlInfo should parse both deviceInfo and mediaPlayerInfo together DONE
+                //3. GetDeviceInfo should just be Task, no return value DONE
+                //4. GetDebugInfo should call GetXmlDeviceInfo & GetXmlMediaPlayerInfo & just return the XML, not parse it. DONE
+                //5. Suck it up that you're essentially duplicating this one method, all 4 lines of it. MOSTLY DONE
+                //6. Maybe work on these cancellation delays, put their generation into the GetXml... methods themselves and call them with null.
 
-                cts.CancelAfter(5000);
+                CancellationTokenSource cts = new();
+                cts.CancelAfter(2500);
+                var deviceInfo = await GetXmlDeviceInfo(cts.Token);
+
+                cts.CancelAfter(2500);
                 var mediaPlayerInfo = await GetXmlMediaPlayerInfo(cts.Token);
-                
+
+                ParseXmlInfo(deviceInfo + mediaPlayerInfo);
+
                 NotifyObservers();
-                return deviceInfo + "\n" + mediaPlayerInfo;
             }
             catch ( Exception ex )
             {
@@ -146,16 +153,16 @@ namespace Cave.DeviceControllers.Televisions.Roku
         }
 
         /// <summary>
-        /// Parses the XML response from <see cref="GetXmlDeviceInfo"/> to update
-        /// device state.
+        /// Parses the XML responses from <see cref="GetXmlDeviceInfo"/> and
+        /// <see cref="GetXmlMediaPlayerInfo"/> to update device state.
         /// </summary>
-        private void ParseXmlInfo(string? deviceInfo)
+        private void ParseXmlInfo(string? xmlInfo)
         {
             try
             {
-                if( deviceInfo is not null )
+                if( xmlInfo is not null )
                 {
-                    using MemoryStream stream = new(Encoding.UTF8.GetBytes(deviceInfo));
+                    using MemoryStream stream = new(Encoding.UTF8.GetBytes(xmlInfo));
                     using XmlReader reader = XmlReader.Create(stream, new XmlReaderSettings());
 
                     while ( reader.Read() )
@@ -176,6 +183,15 @@ namespace Cave.DeviceControllers.Televisions.Roku
                             case "friendly-device-name":
                                 this.Name = reader.ReadElementContentAsString();
                                 break;
+                            // won't be able to test any of this out until I go home,
+                            // (unless I find a connected RokuTV on campus somewhere?...)
+                            // and then my internet hasn't been working at home the last
+                            // couple days, so I don't even know if I can test at all
+                            // until it's fixed
+                            case "player":
+                                var mediaState = reader.GetAttribute("state");
+                                Info.MediaState = GetMediaState(mediaState);
+                                break;
                         }
                     }
                 }
@@ -185,6 +201,30 @@ namespace Cave.DeviceControllers.Televisions.Roku
                 Logger.Error($"{nameof(ParseXmlInfo)} :: {ex.Message}");
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Takes a nullable string representing media player state and returns
+        /// the <see cref="MediaState"/> matching it, or null if
+        /// <paramref name="state"/> is null or none match.
+        /// </summary>
+        /// <param name="state"><see cref="System.String"/> representing
+        /// playback state.</param>
+        /// <returns>A <see cref="MediaState"/> matching the given string, or
+        /// null if none match.</returns>
+        private static MediaState? GetMediaState(string? state)
+        {
+            return state switch
+            {
+                "none" => MediaState.None,
+                "play" or "playing" => MediaState.Playing,    // which actually is it?
+                "pause" or "paused" => MediaState.Paused,
+                "buffering" => MediaState.Buffering,
+                "stopped" => MediaState.Stopped,
+                "finished" => MediaState.Finished,
+                "error" => MediaState.Error,
+                _ => null,
+            };
         }
 
         /// <summary>
@@ -628,7 +668,12 @@ namespace Cave.DeviceControllers.Televisions.Roku
         {
             try
             {
-                return await GetDeviceInfo();
+                CancellationTokenSource cts = new();
+                cts.CancelAfter(2500);
+                var deviceInfo = await GetXmlDeviceInfo(cts.Token);
+                cts.CancelAfter(2500);
+                var mediaPlayerInfo = await GetXmlMediaPlayerInfo(cts.Token);
+                return deviceInfo + "\n" + mediaPlayerInfo;
             }
             catch { throw; }
         }

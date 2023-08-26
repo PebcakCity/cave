@@ -109,7 +109,12 @@ namespace Cave.DeviceControllers.Televisions.Roku
                 cts.CancelAfter(2500);
                 var mediaPlayerInfo = await GetXmlMediaPlayerInfo(cts.Token);
 
-                ParseXmlInfo(deviceInfo + mediaPlayerInfo);
+                // Unfortunately can't just join them and parse together because
+                // mediaPlayerInfo has its own <?xml ...> declaration... results in
+                // exception.  Guess I could just remove opening tag on it...
+                // Fixing for now this way
+                ParseXmlInfo(deviceInfo);
+                ParseXmlInfo(mediaPlayerInfo);
 
                 NotifyObservers();
             }

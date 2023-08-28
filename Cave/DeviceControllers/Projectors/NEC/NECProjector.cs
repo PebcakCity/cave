@@ -4,6 +4,7 @@ using NLog;
 
 using Cave.Interfaces;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace Cave.DeviceControllers.Projectors.NEC
 {
@@ -89,6 +90,21 @@ namespace Cave.DeviceControllers.Projectors.NEC
         #region Private helpers
 
         /// <summary>
+        /// Handles an exception by logging what method it occurred in and
+        /// notifying observers.
+        /// </summary>
+        /// <param name="ex">The Exception</param>
+        /// <param name="methodExOccurredIn">Name of the method
+        /// <paramref name="ex"/> occurred in.  Provided automatically by
+        /// <see cref="CallerMemberNameAttribute"/></param>
+        private void HandleException(Exception ex, [CallerMemberName] string? methodExOccurredIn = null)
+        {
+            Logger.Error($"{methodExOccurredIn} :: {ex}");
+            foreach ( var observer in Observers )
+                observer.OnError(ex);
+        }
+
+        /// <summary>
         /// Fetches current device state, stores it in our
         /// <see cref="DeviceInfo"/> struct, and calls
         /// <see cref="NotifyObservers"/> to pass a copy of that struct to
@@ -114,7 +130,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
             catch ( Exception ex )
             {
-                Logger.Error($"{nameof(GetDeviceInfo)} :: {ex}");
+                HandleException(ex);
                 throw;
             }
         }
@@ -122,8 +138,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
 
         /// <summary>
         /// Passes all gathered device state/info to observers, optionally
-        /// passing a message of the given <see cref="MessageType">
-        /// MessageType</see> (Info, Success, Warning, Error) as well.
+        /// passing a message of the given <see cref="MessageType"/>
+        /// (Info, Success, Warning, Error) as well.
         /// </summary>
         /// <param name="message">An optional message to display</param>
         /// <param name="type">The type or severity level of the message to display</param>
@@ -177,7 +193,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
             catch( Exception ex )
             {
-                Logger.Error($"{nameof(GetLampInfo)} :: {ex}");
+                HandleException(ex);
                 throw;
             }
         }
@@ -199,7 +215,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
             catch ( Exception ex )
             {
-                Logger.Error($"{nameof(GetModelNumber)} :: {ex}");
+                HandleException(ex);
                 throw;
             }
         }
@@ -221,7 +237,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
             catch ( Exception ex )
             {
-                Logger.Error($"{nameof(GetSerialNumber)} :: {ex}");
+                HandleException(ex);
                 throw;
             }
         }
@@ -249,7 +265,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
             catch ( Exception ex )
             {
-                Logger.Error($"{nameof(GetErrors)} :: {ex}");
+                HandleException(ex);
                 throw;
             }
         }
@@ -353,8 +369,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
         }
@@ -372,8 +387,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
         }
@@ -400,8 +414,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
         }
@@ -423,8 +436,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
         }
@@ -455,8 +467,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
         }
@@ -475,8 +486,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
         }
@@ -521,8 +531,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
         }
@@ -550,8 +559,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
         }
@@ -579,8 +587,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
 
@@ -615,8 +622,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
 
@@ -645,8 +651,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
         }
@@ -665,8 +670,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
         }

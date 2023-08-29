@@ -7,12 +7,15 @@ using NLog;
 
 using Cave.Interfaces;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace Cave.DeviceControllers.Televisions.Roku
 {
     /// <summary>
     /// A simple controller for Roku TVs using their REST API published here:
-    /// https://developer.roku.com/docs/developer-program/dev-tools/external-control-api.md
+    /// <see href="https://developer.roku.com/docs/developer-program/dev-tools/external-control-api.md"/>.
+    /// Media playback info:
+    /// <see href="https://developer.roku.com/docs/references/scenegraph/media-playback-nodes/video.md"/>.
     /// </summary>
     public class RokuTV : Television, IDebuggable
     {
@@ -61,7 +64,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
             catch ( Exception ex )
             {
-                Logger.Error($"{nameof(Initialize)} :: {ex.Message}");
+                HandleException(ex);
                 throw;
             }
         }
@@ -85,6 +88,21 @@ namespace Cave.DeviceControllers.Televisions.Roku
         #region Private helpers
 
         /// <summary>
+        /// Handles an exception by logging what method it occurred in and
+        /// notifying observers.
+        /// </summary>
+        /// <param name="ex">The Exception</param>
+        /// <param name="methodExOccurredIn">Name of the method
+        /// <paramref name="ex"/> occurred in.  Provided automatically by
+        /// <see cref="CallerMemberNameAttribute"/></param>
+        private void HandleException( Exception ex, [CallerMemberName] string? methodExOccurredIn = null )
+        {
+            Logger.Error($"{methodExOccurredIn} :: {ex}");
+            foreach ( var observer in Observers )
+                observer.OnError(ex);
+        }
+
+        /// <summary>
         /// Fetches current device state using ECP commands "/query/device-info"
         /// and "/query/media-player", parses these responses for state info
         /// and then calls <see cref="NotifyObservers"/> to publish the state
@@ -92,27 +110,15 @@ namespace Cave.DeviceControllers.Televisions.Roku
         /// </summary>
         private async Task GetDeviceInfo()
         {
+            CancellationTokenSource cts = new();
             try
             {
-                // Changes/todo: 
-                //1. Incorporate the play/pause state info like I have been thinking about? DONE
-                //2. ParseXmlInfo should parse both deviceInfo and mediaPlayerInfo together DONE
-                //3. GetDeviceInfo should just be Task, no return value DONE
-                //4. GetDebugInfo should call GetXmlDeviceInfo & GetXmlMediaPlayerInfo & just return the XML, not parse it. DONE
-                //5. Suck it up that you're essentially duplicating this one method, all 4 lines of it. MOSTLY DONE
-                //6. Maybe work on these cancellation delays, put their generation into the GetXml... methods themselves and call them with null.
-
-                CancellationTokenSource cts = new();
-                cts.CancelAfter(2500);
+                cts.CancelAfter(2000);
                 var deviceInfo = await GetXmlDeviceInfo(cts.Token);
 
-                cts.CancelAfter(2500);
+                cts.CancelAfter(2000);
                 var mediaPlayerInfo = await GetXmlMediaPlayerInfo(cts.Token);
 
-                // Unfortunately can't just join them and parse together because
-                // mediaPlayerInfo has its own <?xml ...> declaration... results in
-                // exception.  Guess I could just remove opening tag on it...
-                // Fixing for now this way
                 ParseXmlInfo(deviceInfo);
                 ParseXmlInfo(mediaPlayerInfo);
 
@@ -120,8 +126,12 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
             catch ( Exception ex )
             {
-                Logger.Error($"{nameof(GetDeviceInfo)} :: {ex.Message}");
+                HandleException(ex);
                 throw;
+            }
+            finally
+            {
+                cts.Dispose();
             }
         }
 
@@ -188,11 +198,6 @@ namespace Cave.DeviceControllers.Televisions.Roku
                             case "friendly-device-name":
                                 this.Name = reader.ReadElementContentAsString();
                                 break;
-                            // won't be able to test any of this out until I go home,
-                            // (unless I find a connected RokuTV on campus somewhere?...)
-                            // and then my internet hasn't been working at home the last
-                            // couple days, so I don't even know if I can test at all
-                            // until it's fixed
                             case "player":
                                 var mediaState = reader.GetAttribute("state");
                                 Info.MediaState = GetMediaState(mediaState);
@@ -203,7 +208,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
             catch ( Exception ex )
             {
-                Logger.Error($"{nameof(ParseXmlInfo)} :: {ex.Message}");
+                HandleException(ex);
                 throw;
             }
         }
@@ -222,8 +227,8 @@ namespace Cave.DeviceControllers.Televisions.Roku
             return state switch
             {
                 "none" => MediaState.None,
-                "play" or "playing" => MediaState.Playing,    // which actually is it?
-                "pause" or "paused" => MediaState.Paused,
+                "play" or "playing" => MediaState.Playing,    // seems to be:
+                "pause" or "paused" => MediaState.Paused,     // "play"/"pause"
                 "buffering" => MediaState.Buffering,
                 "stopped" => MediaState.Stopped,
                 "finished" => MediaState.Finished,
@@ -261,12 +266,13 @@ namespace Cave.DeviceControllers.Televisions.Roku
         /// is anything but success (< 200 or > 299).</exception>
         private async Task<HttpResponseMessage> KeyPress( string key, CancellationToken? token = null )
         {
+            CancellationTokenSource? cts = null;
             try
             {
                 if ( token == null )
                 {
-                    CancellationTokenSource cts = new();
-                    cts.CancelAfter(5000);
+                    cts = new();
+                    cts.CancelAfter(2000);
                     token = cts.Token;
                 }
                 var response = await Client!.PostAsync($"/keypress/{key}", null, (CancellationToken)token);
@@ -276,8 +282,12 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
             catch ( Exception ex )
             {
-                Logger.Error($"{nameof(KeyPress)}({nameof(key)}) :: {ex.Message}");
+                HandleException(ex);
                 throw;
+            }
+            finally
+            {
+                cts?.Dispose();
             }
         }
 
@@ -297,8 +307,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
         }
@@ -315,8 +324,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
         }
@@ -333,8 +341,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
         }
@@ -351,8 +358,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
         }
@@ -369,8 +375,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
         }
@@ -387,8 +392,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
         }
@@ -405,8 +409,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
         }
@@ -423,8 +426,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
         }
@@ -441,8 +443,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
         }
@@ -459,8 +460,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
         }
@@ -481,8 +481,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
         }
@@ -505,8 +504,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in this.Observers )
-                    observer.OnError( ex );
+                HandleException(ex);
                 throw;
             }
         }
@@ -525,8 +523,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
         }
@@ -562,8 +559,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
         }
@@ -607,8 +603,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
         }
@@ -626,8 +621,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
         }
@@ -652,8 +646,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
+                HandleException(ex);
                 throw;
             }
         }
@@ -671,16 +664,20 @@ namespace Cave.DeviceControllers.Televisions.Roku
         /// <returns>A string containing the XML responses.</returns>
         public async Task<string> GetDebugInfo()
         {
+            CancellationTokenSource cts = new();
             try
             {
-                CancellationTokenSource cts = new();
-                cts.CancelAfter(2500);
+                cts.CancelAfter(2000);
                 var deviceInfo = await GetXmlDeviceInfo(cts.Token);
-                cts.CancelAfter(2500);
+                cts.CancelAfter(2000);
                 var mediaPlayerInfo = await GetXmlMediaPlayerInfo(cts.Token);
                 return deviceInfo + "\n" + mediaPlayerInfo;
             }
             catch { throw; }
+            finally
+            {
+                cts.Dispose();
+            }
         }
 
         /// <summary>
@@ -731,23 +728,27 @@ namespace Cave.DeviceControllers.Televisions.Roku
         /// </summary>
         public async Task ClearCache()
         {
+            CancellationTokenSource cts = new();
             try
             {
                 var keys = new string[] { "Home", "Home", "Home", "Home", "Home",
                                             "Up", "Rev", "Rev", "Fwd", "Fwd" };
+                cts.CancelAfter(5000);
                 foreach ( var key in keys )
                 {
-                    await KeyPress(key);
+                    await KeyPress(key, cts.Token);
                     await Task.Delay(100);
                 }
                 NotifyObservers("Clearing your device's cache.  Please wait for it to restart...");
             }
             catch ( Exception ex )
             {
-                foreach ( var observer in this.Observers )
-                    observer.OnError(ex);
-                Logger.Error(ex);
+                HandleException(ex);
                 throw;
+            }
+            finally
+            {
+                cts.Dispose();
             }
         }
 

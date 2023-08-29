@@ -65,8 +65,9 @@ namespace Cave.DeviceControllers.Projectors.NEC
 
                 NotifyObservers();
             }
-            catch
+            catch (Exception ex)
             {
+                HandleException(ex);
                 throw;
             }
         }
@@ -406,9 +407,9 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// </summary>
         public override async Task DisplayPowerOn()
         {
+            CancellationTokenSource cts = new();
             try
             {
-                var cts = new CancellationTokenSource();
                 cts.CancelAfter(120000);
                 await AwaitPowerOn(cts.Token);
             }
@@ -416,6 +417,10 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 HandleException(ex);
                 throw;
+            }
+            finally
+            {
+                cts.Dispose();
             }
         }
 
@@ -549,9 +554,9 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// matching the <see cref="Input"/> name.</param>
         public override async Task PowerOnSelectInput( object input )
         {
+            CancellationTokenSource cts = new();
             try
             {
-                CancellationTokenSource cts = new();
                 // Cancel if it takes longer than 2 minutes
                 cts.CancelAfter(120000);
                 if ( await AwaitPowerOn(cts.Token) )
@@ -561,6 +566,10 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 HandleException(ex);
                 throw;
+            }
+            finally
+            {
+                cts.Dispose();
             }
         }
 

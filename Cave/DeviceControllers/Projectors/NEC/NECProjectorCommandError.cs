@@ -33,36 +33,62 @@
             { (0x03, 0x02), "Adjustment failed." }
         };
 
-        private readonly string? _message;
+        private readonly string _message;
 
-        // Make private once we are done testing
-        public (int Byte1, int Byte2) ErrorTuple { get; set; }
+        private (int Byte1, int Byte2) ErrorTuple { get; init; }
 
-        public string ErrorCode
+        private string ErrorCode
         {
-            get
-            {
-                return string.Format("{0:x2}{1:x2}", ErrorTuple.Byte1, ErrorTuple.Byte2);
-            }
+            get => string.Format("{0:x2}{1:x2}", ErrorTuple.Byte1, ErrorTuple.Byte2);
         }
+
         public override string Message
         {
-            get
-            {
-                return _message ?? ErrorCodes.GetValueOrDefault(ErrorTuple) ?? "Unknown error";
-            }
+            get => _message;
         }
-        public NECProjectorCommandError() { }
+
+        /// <summary>
+        /// Default constructor
+        /// </summary>
+        public NECProjectorCommandError() { _message = string.Empty; }
+
+        /// <summary>
+        /// Constructor taking a tuple of two <see cref="int"/> values and an
+        /// optional custom error message.  The value tuple is used as a
+        /// dictionary key to retrieve a default associated error message from
+        /// a static dictionary.  If the key does not exist in the error
+        /// dictionary, an <see cref="ArgumentException"/> is thrown.  If a
+        /// custom message is provided, it is used in place of the default
+        /// message.
+        /// </summary>
+        /// <param name="errorValues">A value tuple of two ints.</param>
+        /// <param name="customMessage">A message to use in place of the
+        /// default one provided by the dictionary.</param>
+        /// <exception cref="ArgumentException">Thrown if the argument to
+        /// the constructor is determined to be invalid, that is, there is no
+        /// known NEC projector error code matching this tuple.</exception>
         public NECProjectorCommandError((int byte1, int byte2) errorValues, string? customMessage = null)
         {
             ErrorTuple = errorValues;
-            _message = customMessage;
+            if ( !ErrorCodes.TryGetValue(ErrorTuple, out string? defaultMessage) )
+                throw new ArgumentException($"Bad argument to {nameof(NECProjectorCommandError)} constructor.");
+            _message = (customMessage ?? defaultMessage) ?? "Unknown NEC command error";
         }
-        public NECProjectorCommandError(int byte1, int byte2) : this((byte1, byte2)) { }
+
+        /// <summary>
+        /// Constructor taking two <see cref="int"/> values, plus an optional
+        /// custom error message.  Combines the two ints into a tuple and calls
+        /// the overload taking a tuple and string.
+        /// </summary>
+        /// <param name="byte1"></param>
+        /// <param name="byte2"></param>
+        /// <param name="customMessage"></param>
+        public NECProjectorCommandError(int byte1, int byte2, string? customMessage = null) 
+            : this((byte1, byte2), customMessage) { }
+
         public override string ToString()
         {
-            return string.Format("NECCommandError {0} - {1}",
-                ErrorCode, Message);
+            return $"{nameof(NECProjectorCommandError)} {ErrorCode} - {Message}";
         }
 
         public static implicit operator string(NECProjectorCommandError error) => error.ToString();

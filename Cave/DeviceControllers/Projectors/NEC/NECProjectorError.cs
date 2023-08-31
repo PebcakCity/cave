@@ -1,16 +1,11 @@
-
-using NLog;
-
 namespace Cave.DeviceControllers.Projectors.NEC
 {
     public class NECProjectorError : DeviceError
     {
-        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-
         /// <summary>
-        /// Internal error condition bitfields
+        /// Internal error condition bitfields pulled from the manual
         /// </summary>
-        public static readonly Dictionary<int, Dictionary<int, string?>> ErrorStates = new()
+        private static readonly Dictionary<int, Dictionary<int, string?>> ErrorStates = new()
         {
             {
                 0,
@@ -79,62 +74,84 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         };
 
-        private readonly int BytePosition;
-        private readonly int BitValue;
+        private readonly string _message;
 
         public override string Message
         {
-            get
-            {
-                return ErrorStates.GetValueOrDefault(BytePosition)?
-                    .GetValueOrDefault(BitValue)!;
-            }
+            get => _message;
         }
 
-        public NECProjectorError() { }
-        public NECProjectorError( int bytePos, int bitVal )
+        /// <summary>
+        /// Default constructor
+        /// </summary>
+        public NECProjectorError() { _message = string.Empty; }
+
+        /// <summary>
+        /// Constructor taking a pair of keys and optionally a custom error
+        /// message.  The keys are a byte position and bit value used to index
+        /// into a dictionary mapped over a bitfield.  The dictionary contains
+        /// error messages provided by the NEC documentation.  If the bit value
+        /// bitwise ANDed with the byte value is not equal to zero, the
+        /// error condition associated with that byte and bit combination is
+        /// true. The keys are checked for existing even if a custom message is
+        /// provided, partly to ensure our documentation is correct.  If there
+        /// is no entry in the dictionary matching these keys, an
+        /// <see cref="ArgumentException"/> is thrown.  If a custom message is
+        /// provided, it is used in place of the dictionary-provided one for
+        /// throwing more meaningful exceptions.
+        /// </summary>
+        /// <param name="byteKey">Position of the byte to look at in the
+        /// bitfield.</param>
+        /// <param name="bitKey">Bit value to bitwise AND with the byte value
+        /// to determine whether an error is set.</param>
+        /// <param name="customMessage">A message to use in place of the
+        /// default one provided by the dictionary.</param>
+        /// <exception cref="ArgumentException">Thrown if no entry is found in
+        /// the dictionary using the provided keys.
+        /// </exception>
+        public NECProjectorError( int byteKey, int bitKey, string? customMessage = null )
         {
-            (BytePosition, BitValue) = (bytePos, bitVal);
+            if ( ! ErrorStates.ContainsKey(byteKey) ||
+                 ! ErrorStates[byteKey].ContainsKey(bitKey) )
+                throw new ArgumentException($"Bad arguments to {nameof(NECProjectorError)} constructor.");
+
+            _message = (customMessage ?? ErrorStates[byteKey][bitKey]) ?? "Unknown NEC error";
         }
 
-        public static NECProjectorError? TryGetByValues( int bytePos, int bitVal )
-        {
-            string? message = ErrorStates.GetValueOrDefault(bytePos)?.GetValueOrDefault(bitVal);
-            if( message != null )
-                return new NECProjectorError(bytePos, bitVal);
-            return null;
-        }
-
+        /// <summary>
+        /// Reads the data from the <see cref="Response"/> to a
+        /// GetErrors <see cref="Command"/> and parses it for reported errors.
+        /// </summary>
+        /// <param name="response"></param>
+        /// <returns>A list of <see cref="NECProjectorError"/> instances
+        /// reported in the response.</returns>
         public static List<NECProjectorError> GetErrorsFromResponse( Response response )
         {
-            try
+            List<NECProjectorError> errorsReported = new();
+            /* Error bytes are contained in Data[5..8] & [13], [14..16] are
+             * system reserved, checksum is Data[17] */
+            if ( response is not null && response.Data.Length > 18 )
             {
-                List<NECProjectorError> errorsReported = new();
                 var relevantBytes = response.Data[5..14];
-                foreach ( var outerPair in ErrorStates )
+                foreach ( var outerKeyValuePair in ErrorStates )
                 {
-                    int byteKey = outerPair.Key;
-                    Dictionary<int, string?> errorData = outerPair.Value;
-                    foreach ( var innerPair in errorData )
+                    int byteKey = outerKeyValuePair.Key;
+                    Dictionary<int, string?> errorData = outerKeyValuePair.Value;
+                    foreach ( var innerKeyValuePair in errorData )
                     {
-                        int bitKey = innerPair.Key;
-                        string? errorMsg = innerPair.Value;
+                        int bitKey = innerKeyValuePair.Key;
+                        string? errorMsg = innerKeyValuePair.Value;
                         if ( ( relevantBytes[byteKey] & bitKey ) != 0 && errorMsg != null )
                             errorsReported.Add(new NECProjectorError(byteKey, bitKey));
                     }
                 }
-                return errorsReported;
             }
-            catch ( Exception ex )
-            {
-                Logger.Error($"NECProjectorError.{nameof(GetErrorsFromResponse)}() :: {ex}");
-                return new List<NECProjectorError>();
-            }
+            return errorsReported;
         }
 
         public override string ToString()
         {
-            return $"NECProjectorError: {Message}";
+            return $"{nameof(NECProjectorError)}: {Message}";
         }
 
         public static implicit operator string( NECProjectorError error ) => error.ToString();

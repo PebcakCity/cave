@@ -113,7 +113,8 @@ else
                 case nameof( NECProjector ):
                     if ( IpAddress is not null )
                     {
-                        Device = new NECProjector( DeviceName, IpAddress, Port );
+                        NetworkDeviceConnectionInfo networkInfo = new(IpAddress, Port);
+                        Device = new NECProjector( DeviceName, networkInfo );
                         this.Unsubscriber = Device.Subscribe(this);
                         await TryInitializeDevice();
                     }

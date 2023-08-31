@@ -1,29 +1,30 @@
 using NLog;
 using System.Net.Sockets;
 
+using Cave.Interfaces;
+
 namespace Cave.DeviceControllers.Projectors.NEC
 {
-    public class Client
+    public class SocketClient : INECClient
     {
         private static readonly Logger Logger = LogManager.GetLogger("NEC.Client");
-        private readonly string? IpAddress = null;
-        private readonly int Port=7142;
-        private readonly NECProjector Device;
+        private readonly NetworkDeviceConnectionInfo ConnectionInfo;
 
-        private Client(NECProjector device, string ip, int port=7142)
+        private SocketClient(NetworkDeviceConnectionInfo connectionInfo)
         {
-            this.IpAddress = ip;
-            this.Port = port;
-            this.Device = device;
+            this.ConnectionInfo = connectionInfo;
         }
 
-        public static async Task<Client> Create(NECProjector device, string ip, int port=7142)
+        public static async Task<SocketClient> Create(IDeviceConnectionInfo connectionInfo)
         {
             try
             {
-                Logger.Info("Creating new NEC.Client instance.");
-                Client instance = new(device, ip, port);
-                Logger.Info($"Attempting connection to: {ip}:{port}");
+                if ( connectionInfo is not NetworkDeviceConnectionInfo networkInfo )
+                    throw new InvalidOperationException("Invalid connection info.");
+                
+                Logger.Info("Creating new NEC.SocketClient instance.");
+                SocketClient instance = new(networkInfo);
+                Logger.Info($"Attempting connection to: {networkInfo.IPAddress}:{networkInfo.Port}");
                 await instance.TestConnection();
                 return instance;
             }
@@ -42,7 +43,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 CancellationTokenSource cts = new();
                 cts.CancelAfter(3000);
                 var token = cts.Token;
-                await socket.ConnectAsync(this.IpAddress!, this.Port, token);
+                await socket.ConnectAsync(ConnectionInfo.IPAddress, ConnectionInfo.Port, token);
                 Logger.Info($"Connection success.");
                 socket.Shutdown(SocketShutdown.Both);
             }
@@ -72,7 +73,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
 
                 using Socket socket = new(AddressFamily.InterNetwork,
                     SocketType.Stream, ProtocolType.Tcp);
-                await socket.ConnectAsync(IpAddress!, Port);
+                await socket.ConnectAsync(ConnectionInfo.IPAddress, ConnectionInfo.Port);
 
                 Logger.Info($"Sending command: {toSend}");
                 int bytesSent = await socket.SendAsync(toSend.Data.ToArray(), SocketFlags.None, token);

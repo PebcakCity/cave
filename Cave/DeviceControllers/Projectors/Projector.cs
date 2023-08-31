@@ -29,15 +29,8 @@ namespace Cave.DeviceControllers.Projectors
         public virtual Task<object?> GetPowerState() { throw new NotImplementedException(); }
         public virtual Task<object?> GetInputSelection() { throw new NotImplementedException(); }
 
-        protected Projector( string deviceName, string address, int port )
-            : base(deviceName)
-        {
-            this.Address = address;
-            this.Port = port;
-        }
+        protected Projector( string deviceName ) : base(deviceName) { }
 
-        public string Address { get; protected set; }
-        public int Port { get; protected set; }
         public List<string>? InputsAvailable { get; protected set; }
     }
 }

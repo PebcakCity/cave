@@ -1,42 +1,47 @@
 using System.Text;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 
 using NLog;
 
 using Cave.Interfaces;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 
 namespace Cave.DeviceControllers.Projectors.NEC
 {
     /// <summary>
-    /// An IP-based controller for projectors manufactured by NEC Display Corporation
+    /// A controller for projectors manufactured by NEC Display Corporation
     /// (Sharp NEC Display Solutions).
     /// </summary>
     public partial class NECProjector : Projector, IDebuggable
     {
-        private Client? Client = null;
+        private INECClient? Client = null;
+        private readonly IDeviceConnectionInfo ConnectionInfo;
         private static readonly Logger Logger = LogManager.GetLogger("NECProjector");
         private DeviceInfo Info;
         private List<IObserver<DeviceInfo>> Observers;
 
         /// <summary>
         /// Creates a new <see cref="NECProjector"/> object with the specified
-        /// name, IP address, port, and a list of strings representing the
-        /// selectable <see cref="Input"/>s available on this device.
+        /// name, <see cref="IDeviceConnectionInfo">connection information
+        /// </see>, and an optional list of strings representing the selectable
+        /// <see cref="Input"/> terminals available on this device.
+        /// After creation, an application must call <see cref="Initialize"/>
+        /// on the device to connect to it.  Preferably this should happen
+        /// after also subscribing to notifications from this device, so that
+        /// the application begins receiving device status updates immediately
+        /// after connecting.
         /// </summary>
         /// <param name="deviceName">A name for the device.</param>
-        /// <param name="address">IP address of the device.</param>
-        /// <param name="port">Port to connect to.  If unspecified defaults
-        /// to 7142, the NEC projector external control protocol port.</param>
+        /// <param name="connectionInfo">Connection information for the device.
+        /// </param>
         /// <param name="inputs">List of strings corresponding to input names
         /// available.  If null, sensible defaults available on most newer
         /// models are chosen.</param>
-        public NECProjector(string deviceName, string address, int port=7142, List<string>? inputs = null)
-            :base(deviceName, address, port)
+        public NECProjector(string deviceName, IDeviceConnectionInfo connectionInfo, List<string>? inputs = null)
+            :base(deviceName)
         {
             this.Name = deviceName;
-            this.Address = address;
-            this.Port = port;
+            this.ConnectionInfo = connectionInfo;
             this.Observers = new List<IObserver<DeviceInfo>>();
             this.InputsAvailable = inputs ?? new List<string> { nameof(Input.RGB1), nameof(Input.HDMI1) };
         }
@@ -44,19 +49,23 @@ namespace Cave.DeviceControllers.Projectors.NEC
         #region Device methods
 
         /// <summary>
-        /// Tries to create a <see cref="Client"/> and use it to connect to the
-        /// device at the address and port given in the constructor.  If successful,
-        /// attempts to retrieve the model number, serial number, and lamp life
-        /// information and then calls <see cref="NotifyObservers"/> to pass that
-        /// gathered data back to observers (such as the application instantiating
-        /// this device controller.)
+        /// Tries to create a <see cref="INECClient"/> instance and use it to
+        /// connect to the device with the <see cref="IDeviceConnectionInfo"/>
+        /// instance given in the constructor.  If it succeeds, it attempts to
+        /// retrieve the model number, serial number, and lamp life information
+        /// and then calls <see cref="NotifyObservers"/> to pass that gathered
+        /// data to any observers who may already be listening (such as the
+        /// application instantiating this device controller.)
         /// </summary>
         public override async Task Initialize()
         {
             try
             {
-                this.Client = await Client.Create(this, Address, Port);
-                
+                if ( ConnectionInfo is NetworkDeviceConnectionInfo networkInfo )
+                    this.Client = await SocketClient.Create(networkInfo);
+                else
+                    throw new NotImplementedException("Clients only currently available for network devices.");
+
                 await GetModelNumber();
                 await GetSerialNumber();
                 await GetLampInfo(LampInfo.GoodForSeconds);
@@ -700,7 +709,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             await GetDeviceInfo();
             string debugInfo = string.Empty;
             debugInfo += $"Device name: {this.Name}\n"
-                + $"Address: {this.Address}:{this.Port}\n"
+                + $"Connection info - {ConnectionInfo}\n"
                 + $"Model: {Info.ModelNumber}\n"
                 + $"Serial #: {Info.SerialNumber}\n"
                 + $"Power state: {Info.PowerState}\n"

@@ -30,6 +30,7 @@ namespace CaveGtk
 {
     internal class MainWindow : Window, IObserver<DeviceInfo>
     {
+#pragma warning disable CS0414
         [UI] private Button _btn1 = null;
         [UI] private Button _btn2 = null;
         [UI] private Button _btn3 = null;
@@ -41,6 +42,7 @@ namespace CaveGtk
         [UI] private Button _btnOn = null;
         [UI] private Button _btnOff = null;
         [UI] private TextView _textView = null;
+#pragma warning restore CS0414
 
         private IDisposable Unsubscriber;
         private Projector Projector;
@@ -62,7 +64,8 @@ namespace CaveGtk
             try
             {
                 string ip = Environment.GetEnvironmentVariable("NECTESTIP");
-                Projector = new NECProjector( "Test projector", ip );
+
+                Projector = new NECProjector( "Test projector", new NetworkDeviceConnectionInfo(ip, 7142) );
                 Subscribe( Projector );
                 Task.Run(Projector.Initialize);
             }

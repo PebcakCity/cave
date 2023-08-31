@@ -17,6 +17,7 @@ namespace Cave.DisplayTester
 {
     internal class MainWindow : Window, IObserver<DeviceInfo>
     {
+#pragma warning disable CS0414
         /* Top level */
         [UI] private Box BoxMainWindow = null;
 
@@ -70,6 +71,7 @@ namespace Cave.DisplayTester
 
         [UI] private ScrolledWindow ScrollWindowStatus = null;
         [UI] private TextView TextViewStatus = null;
+#pragma warning restore CS0414
 
 
         private readonly Dictionary<string, int> DisplayTypes = new()
@@ -208,13 +210,14 @@ namespace Cave.DisplayTester
                     switch ( deviceClass )
                     {
                         case nameof(NECProjector):
-                            DisplayDevice = new NECProjector("Projector", ipAddress, port);
+                            var connectionInfo = new NetworkDeviceConnectionInfo(ipAddress, port);
+                            DisplayDevice = new NECProjector("Office projector", connectionInfo);
                             Unsubscriber = DisplayDevice.Subscribe(this);
                             await DisplayDevice.Initialize();
                             EnableControlsForDevice(DisplayDevice);
                             break;
                         case nameof(RokuTV):
-                            DisplayDevice = new RokuTV("TV", ipAddress, port);
+                            DisplayDevice = new RokuTV("Home TV", ipAddress, port);
                             Unsubscriber = DisplayDevice.Subscribe(this);
                             await DisplayDevice.Initialize();
                             EnableControlsForDevice(DisplayDevice);

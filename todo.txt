@@ -1,19 +1,8 @@
-1. DisplayTester is basically done for now.  Until I implement more controllers
-or think of some new must-have feature, I think it's time to go back to working
-on the other apps.  (DisplayTester could use a renaming maybe)
+- Rework exception system.  Poor exception handling is losing stack trace
+info & it's ugly all around.
 
---
 
-2. Clean up the controllers... Did that (a little).  Reorganized & documented.
-
---
-
-3. Clean up the apps... Will probably start fresh on CaveGtk (at some point).
-CaveBlazor needs straightened out.  Haven't looked at it in a while.
-
---
-
-4. Implement a configuration file/database reader system for the RPi apps.
+- Implement a configuration file/database reader system for the RPi apps.
 
 Figure out a data structure for storing multiple devices and a set of
 "inputs" or instruction sequences that will cause different inputs to be

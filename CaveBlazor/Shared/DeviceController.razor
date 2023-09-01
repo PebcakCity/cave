@@ -284,7 +284,7 @@ else
                 ToastService.ShowError( e.Message );
             }
         }
-        else if ( exception is NECProjectorCommandError nce )
+        else if ( exception is NECProjectorCommandException nce )
         {
             ToastService.ShowError( nce );
         }

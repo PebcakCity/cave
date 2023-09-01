@@ -126,7 +126,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await Client!.SendCommandAsync(Command.GetStatus);
                 if ( response.IndicatesFailure )
-                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
+                    throw new NECProjectorCommandException(response.Data[5], response.Data[6]);
 
                 Info.PowerState = PowerState.FromValue(response.Data[6]);
                 var inputTuple = (response.Data[8], response.Data[9]);
@@ -168,7 +168,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// Gets the requested lamp information and stores it in our
         /// <see cref="DeviceInfo"/> struct so that <see cref="NotifyObservers"/>
         /// will push lamp info/state to observers. If the command triggers a
-        /// <see cref="NECProjectorCommandError"/> (most likely due to the
+        /// <see cref="NECProjectorCommandException"/> (most likely due to the
         /// device being of a lampless design), all lamp information values are
         /// set to -1.
         /// </summary>
@@ -182,7 +182,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await Client!.SendCommandAsync(Command.GetLampInfo.Prepare(0x00, (byte)lampInfo));
                 if ( response.IndicatesFailure )
-                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
+                    throw new NECProjectorCommandException(response.Data[5], response.Data[6]);
 
                 int value = BitConverter.ToInt32(response.Data[7..11], 0);
                 switch ( lampInfo )
@@ -196,7 +196,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 }
                 return value;
             }
-            catch( NECProjectorCommandError )
+            catch( NECProjectorCommandException )
             {
                 Info.LampHoursTotal = Info.LampHoursUsed = -1;
                 return -1;
@@ -253,18 +253,18 @@ namespace Cave.DeviceControllers.Projectors.NEC
         }
 
         /// <summary>
-        /// Gets a list of <see cref="NECProjectorError"/> instances representing
+        /// Gets a list of <see cref="NECProjectorException"/> instances representing
         /// the errors this projector is currently reporting.  Optionally logs
         /// those errors as warnings with the logging platform.
         /// </summary>
         /// <param name="logErrors">Whether to log the errors.</param>
-        /// <returns>The list of <see cref="NECProjectorError"/>instances reported.</returns>
-        private async Task<List<NECProjectorError>> GetErrors( bool logErrors = true )
+        /// <returns>The list of <see cref="NECProjectorException"/>instances reported.</returns>
+        private async Task<List<NECProjectorException>> GetErrors( bool logErrors = true )
         {
             try
             {
                 var response = await Client!.SendCommandAsync(Command.GetErrors);
-                var errors = NECProjectorError.GetErrorsFromResponse(response);
+                var errors = NECProjectorException.GetErrorsFromResponse(response);
                 if ( errors.Count > 0 && logErrors )
                 {
                     Logger.Warn("Device is reporting the following internal error(s):");
@@ -291,7 +291,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// is canceled. False if a non-exception throwing reason for failure
         /// is detected, such as the device being in an uninterruptable state
         /// of cooldown when this command is issued.</returns>
-        /// <exception cref="NECProjectorCommandError">Thrown if the device
+        /// <exception cref="NECProjectorCommandException">Thrown if the device
         /// fails to execute the command, such as when the device is in a
         /// state which prevents execution of that command.</exception>
         /// <exception cref="OperationCanceledException">Thrown if cancellation
@@ -302,7 +302,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// for the device's power state that lies outside of the documented
         /// range.</exception>
         /// <exception cref="AggregateException">A collection of one or more
-        /// <see cref="NECProjectorError"/> instances if projector errors are
+        /// <see cref="NECProjectorException"/> instances if projector errors are
         /// detected that would prevent the power on operation from succeeding.
         /// </exception>
         private async Task<bool> AwaitPowerOn( CancellationToken cancellationToken )
@@ -313,7 +313,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await Client!.SendCommandAsync(Command.PowerOn);
                 if ( response.IndicatesFailure )
-                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
+                    throw new NECProjectorCommandException(response.Data[5], response.Data[6]);
 
                 while ( !deviceReady && failureReason is null )
                 {
@@ -437,7 +437,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// Implements <see cref="IDisplay.DisplayPowerOff"/>.
         /// Tries to powers off the display.
         /// </summary>
-        /// <exception cref="NECProjectorCommandError">Thrown if the device
+        /// <exception cref="NECProjectorCommandException">Thrown if the device
         /// fails to execute the command, such as when the device is in a
         /// state which prevents execution of that command.</exception>
         public override async Task DisplayPowerOff()
@@ -446,7 +446,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await Client!.SendCommandAsync(Command.PowerOff);
                 if ( response.IndicatesFailure )
-                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
+                    throw new NECProjectorCommandException(response.Data[5], response.Data[6]);
             }
             catch ( Exception ex )
             {
@@ -465,7 +465,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// according to the value of <paramref name="muted"/>.
         /// </summary>
         /// <param name="muted">True to mute the display, false to unmute it.</param>
-        /// <exception cref="NECProjectorCommandError">Thrown if the device
+        /// <exception cref="NECProjectorCommandException">Thrown if the device
         /// fails to execute the command, such as when the device is in a
         /// state which prevents execution of that command.</exception>
         public override async Task DisplayMute( bool muted )
@@ -474,7 +474,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await Client!.SendCommandAsync(muted ? Command.VideoMuteOn : Command.VideoMuteOff);
                 if ( response.IndicatesFailure )
-                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
+                    throw new NECProjectorCommandException(response.Data[5], response.Data[6]);
 
                 Info.IsDisplayMuted = muted;
                 NotifyObservers(string.Format("Video mute {0}", ( muted ? "ON" : "OFF" )));
@@ -519,7 +519,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// <exception cref="ArgumentException">Thrown if <paramref name="obj"/>
         /// is neither a <see cref="System.String"/> nor <see cref="Input"/>.
         /// </exception>
-        /// <exception cref="NECProjectorCommandError">Thrown if the device
+        /// <exception cref="NECProjectorCommandException">Thrown if the device
         /// fails to execute the command, such as when the device is in a
         /// state which prevents execution of that command.</exception>
         public override async Task SelectInput( object obj )
@@ -538,7 +538,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 var response = await Client!.SendCommandAsync(Command.SelectInput.Prepare(input));
 
                 if ( response.IndicatesFailure )
-                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
+                    throw new NECProjectorCommandException(response.Data[5], response.Data[6]);
 
                 Info.InputSelected = input;
                 NotifyObservers($"Input '{input}' selected.", MessageType.Success);
@@ -590,7 +590,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// Implements <see cref="IAudio.AudioVolumeUp"/>.
         /// Tries to increase the audio volume by 1 unit.
         /// </summary>
-        /// <exception cref="NECProjectorCommandError">Thrown if the device
+        /// <exception cref="NECProjectorCommandException">Thrown if the device
         /// fails to execute the command, such as when the device is in a
         /// state which prevents execution of that command.</exception>
         public async override Task AudioVolumeUp()
@@ -599,7 +599,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {// relative adjustment, +1 volume unit
                 var response = await Client!.SendCommandAsync(Command.VolumeAdjust.Prepare(0x01, 0x01, 0x00));
                 if ( response.IndicatesFailure )
-                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
+                    throw new NECProjectorCommandException(response.Data[5], response.Data[6]);
 
                 NotifyObservers("Volume +1");
             }
@@ -616,7 +616,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// Implements <see cref="IAudio.AudioVolumeDown"/>.
         /// Tries to decrease the audio volume by 1 unit.
         /// </summary>
-        /// <exception cref="NECProjectorCommandError">Thrown if the device
+        /// <exception cref="NECProjectorCommandException">Thrown if the device
         /// fails to execute the command, such as when the device is in a
         /// state which prevents execution of that command.</exception>
         /// <remarks>Does not work.  The NEC documentation is unclear (to me)
@@ -634,7 +634,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 
                 var response = await Client!.SendCommandAsync(Command.VolumeAdjust.Prepare(0x01, unchecked((byte)~0x01), 0x00));
                 if ( response.IndicatesFailure )
-                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
+                    throw new NECProjectorCommandException(response.Data[5], response.Data[6]);
 
                 NotifyObservers("Volume -1 (maybe)");
             }
@@ -653,7 +653,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// according to the value of <paramref name="muted"/>.
         /// </summary>
         /// <param name="muted">True to mute the audio, false to unmute it.</param>
-        /// <exception cref="NECProjectorCommandError">Thrown if the device
+        /// <exception cref="NECProjectorCommandException">Thrown if the device
         /// fails to execute the command, such as when the device is in a
         /// state which prevents execution of that command.</exception>
         public async override Task AudioMute( bool muted )
@@ -662,7 +662,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await Client!.SendCommandAsync(muted ? Command.AudioMuteOn : Command.AudioMuteOff);
                 if ( response.IndicatesFailure )
-                    throw new NECProjectorCommandError(response.Data[5], response.Data[6]);
+                    throw new NECProjectorCommandException(response.Data[5], response.Data[6]);
 
                 Info.IsAudioMuted = muted;
                 NotifyObservers(string.Format("Audio mute {0}", ( muted ? "ON" : "OFF" )));

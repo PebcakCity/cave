@@ -3,7 +3,7 @@
     /// <summary>
     /// Represents an error due to a failed command
     /// </summary>
-    public class NECProjectorCommandError : DeviceCommandError
+    public class NECProjectorCommandException : DeviceCommandException
     {
         /// <summary>
         /// Error codes corresponding to command failure reasons
@@ -37,42 +37,39 @@
 
         private (int Byte1, int Byte2) ErrorTuple { get; init; }
 
-        private string ErrorCode
-        {
-            get => string.Format("{0:x2}{1:x2}", ErrorTuple.Byte1, ErrorTuple.Byte2);
-        }
+        private string ErrorCode { get => string.Format("{0:x2}{1:x2}", ErrorTuple.Byte1, ErrorTuple.Byte2); }
 
-        public override string Message
-        {
-            get => _message;
-        }
+        public override string Message { get => _message; }
 
         /// <summary>
         /// Default constructor
         /// </summary>
-        public NECProjectorCommandError() { _message = string.Empty; }
+        public NECProjectorCommandException() 
+            : base()
+        {
+            _message = "Command failed for unknown reason."; 
+        }
 
         /// <summary>
-        /// Constructor taking a tuple of two <see cref="int"/> values and an
-        /// optional custom error message.  The value tuple is used as a
-        /// dictionary key to retrieve a default associated error message from
-        /// a static dictionary.  If the key does not exist in the error
-        /// dictionary, an <see cref="ArgumentException"/> is thrown.  If a
-        /// custom message is provided, it is used in place of the default
-        /// message.
+        /// Constructor taking a tuple of two <see cref="int"/> values and an optional custom error message.  The value
+        /// tuple is used as a dictionary key to retrieve a default associated error message from a static dictionary.
+        /// If the key does not exist in the error dictionary, an <see cref="ArgumentException"/> is thrown. If a
+        /// custom message is provided, it is used in place of the default message.
         /// </summary>
-        /// <param name="errorValues">A value tuple of two ints.</param>
-        /// <param name="customMessage">A message to use in place of the
-        /// default one provided by the dictionary.</param>
-        /// <exception cref="ArgumentException">Thrown if the argument to
-        /// the constructor is determined to be invalid, that is, there is no
-        /// known NEC projector error code matching this tuple.</exception>
-        public NECProjectorCommandError((int byte1, int byte2) errorValues, string? customMessage = null)
+        /// <param name="errorValues">A value tuple of two <see cref="int"/> values.</param>
+        /// <param name="customMessage">A message to use in place of the default one provided by the dictionary.
+        /// </param>
+        /// <exception cref="ArgumentException">Thrown if the argument to the constructor is determined to be invalid,
+        /// that is, there is no known NEC projector error code matching this tuple.</exception>
+        public NECProjectorCommandException((int byte1, int byte2) errorValues, string? customMessage = null)
+            : this()
         {
             ErrorTuple = errorValues;
-            if ( !ErrorCodes.TryGetValue(ErrorTuple, out string? defaultMessage) )
-                throw new ArgumentException($"Bad argument to {nameof(NECProjectorCommandError)} constructor.");
-            _message = (customMessage ?? defaultMessage) ?? "Unknown NEC command error";
+            if ( ! ErrorCodes.TryGetValue(ErrorTuple, out string? defaultMessage) )
+                throw new ArgumentException(
+                    $"{ErrorTuple}: bad argument to {nameof(NECProjectorCommandException)} constructor."
+                );
+            _message = (customMessage ?? defaultMessage) ?? _message;
         }
 
         /// <summary>
@@ -80,17 +77,15 @@
         /// custom error message.  Combines the two ints into a tuple and calls
         /// the overload taking a tuple and string.
         /// </summary>
-        /// <param name="byte1"></param>
-        /// <param name="byte2"></param>
-        /// <param name="customMessage"></param>
-        public NECProjectorCommandError(int byte1, int byte2, string? customMessage = null) 
+        /// <param name="byte1">Value 1</param>
+        /// <param name="byte2">Value 2</param>
+        /// <param name="customMessage">A message to use in place of the default one provided by the dictionary.
+        /// </param>
+        public NECProjectorCommandException(int byte1, int byte2, string? customMessage = null) 
             : this((byte1, byte2), customMessage) { }
 
-        public override string ToString()
-        {
-            return $"{nameof(NECProjectorCommandError)} {ErrorCode} - {Message}";
-        }
+        public override string ToString() => $"{nameof(NECProjectorCommandException)} {ErrorCode} - {Message}";
 
-        public static implicit operator string(NECProjectorCommandError error) => error.ToString();
+        public static implicit operator string(NECProjectorCommandException ex) => ex.ToString();
     }
 }

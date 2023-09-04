@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+
 namespace Cave.DeviceControllers.Projectors.NEC
 {
     /// <summary>
@@ -103,32 +105,29 @@ namespace Cave.DeviceControllers.Projectors.NEC
 
         /// <summary>
         /// Static method taking a pair of keys and returning a matching <see cref="NECProjectorException"/> instance.  
-        /// The keys are a byte position and bit value used to index into a dictionary containing error messages
-        /// provided by NEC's documentation.  If there is no entry in the dictionary matching these keys, an
-        /// <see cref="ArgumentException"/> is thrown.
+        /// The keys are used to retrieve an error message from a dictionary of error messages provided in NEC's
+        /// documentation.  If either key is invalid, an <see cref="ArgumentOutOfRangeException"/> is thrown.
         /// </summary>
         /// <param name="byteKey">Dictionary key 1.</param>
         /// <param name="bitKey">Dictionary key 2.</param>
-        /// <returns>A new <see cref="NECProjectorException"/> with a message retrieved from the dictionary using the
+        /// <returns>A new <see cref="NECProjectorException"/> with the message retrieved from the dictionary using the
         /// provided keys.</returns>
-        /// <exception cref="ArgumentException">Thrown if no entry is found in the dictionary using the provided
-        /// keys.
-        /// </exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if a key is invalid.</exception>
         public static NECProjectorException CreateNewFromValues(int byteKey, int bitKey)
         {
-            if ( ! ErrorStates.TryGetValue(byteKey, out var innerDictionary) ||
-                 ! ErrorStates[byteKey].TryGetValue(bitKey, out string? message) )
-                throw new ArgumentException(
-                    /* Determine and show which key was bad */
-                    ((innerDictionary is null) ? $"{nameof(byteKey)}={byteKey}" : $"{nameof(bitKey)}={bitKey}")
-                    + $": bad argument to {nameof(NECProjectorException)}.{nameof(CreateNewFromValues)}()."
-                );
-            return new NECProjectorException(message);
+            if ( ErrorStates.TryGetValue(byteKey, out var dictionaryForByte) )
+            {
+                if ( dictionaryForByte.TryGetValue(bitKey, out var message) )
+                    return new NECProjectorException(message);
+                throw new ArgumentOutOfRangeException(nameof(bitKey));
+            }
+            throw new ArgumentOutOfRangeException(nameof(byteKey));
         }
 
         /// <summary>
         /// Reads the data from the <see cref="Response"/> to a GetErrors <see cref="Command"/> and parses it for
-        /// reported errors.
+        /// reported errors.  Device error information is contained in a bitfield spanning the 6th through 9th bytes of
+        /// the response.
         /// </summary>
         /// <param name="response"><see cref="Response"/> returned by the projector.</param>
         /// <returns>A list of <see cref="NECProjectorException"/> instances reported in the response.</returns>

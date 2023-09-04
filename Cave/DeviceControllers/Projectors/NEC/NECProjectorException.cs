@@ -131,7 +131,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         {
             List<NECProjectorException> errorsReported = new();
             /* Error bytes are contained in Data[5..8] & [13], [14..16] are system reserved, checksum is Data[17] */
-            if ( response is not null && response.Data.Length > 18 )
+            if ( response is not null && response.Data.Length == 18 )
             {
                 var relevantBytes = response.Data[5..14];
                 foreach ( var outerKeyValuePair in ErrorStates )

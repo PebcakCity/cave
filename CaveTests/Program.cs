@@ -15,13 +15,6 @@ namespace CaveTests
             Test4();
             Test5();
             Test6();
-            Test7();
-
-            Test8();
-            Test9();
-            Test10();
-            Test11();
-            Test12();
         }
 
         static void Test1()
@@ -29,7 +22,7 @@ namespace CaveTests
             try
             {
                 Console.WriteLine("-----Test 1-----");
-                throw new NECProjectorException(0, 4);
+                throw NECProjectorException.CreateNewFromValues(0, 4);
             }
             catch (Exception ex)
             {
@@ -43,7 +36,7 @@ namespace CaveTests
             try
             {
                 Console.WriteLine("-----Test 2-----");
-                throw new NECProjectorException(0, 4, "Eek! An error has happened!");
+                throw new NECProjectorException("Eek! An error has happened!");
             }
             catch (Exception ex)
             {
@@ -57,7 +50,7 @@ namespace CaveTests
             try
             {
                 Console.WriteLine("-----Test 3-----");
-                throw new NECProjectorException(0, 64);
+                throw NECProjectorException.CreateNewFromValues(0, 64);
             }
             catch ( Exception ex )
             {
@@ -66,17 +59,17 @@ namespace CaveTests
             }
         }
 
-
         static void Test4()
         {
             try
             {
                 Console.WriteLine("-----Test 4-----");
-                throw new NECProjectorException(0, 64, "Eek! Another error!!");
+                // will throw an exception itself, bad byteKey
+                throw NECProjectorException.CreateNewFromValues(4, 99);
             }
             catch ( Exception ex )
             {
-                // will print "Eek! Another error!!"
+                // will instead print "byteKey=4: bad argument to..."
                 Console.WriteLine(ex.Message);
             }
         }
@@ -86,12 +79,12 @@ namespace CaveTests
             try
             {
                 Console.WriteLine("-----Test 5-----");
-                // constructor will throw an exception itself, bad byteKey
-                throw new NECProjectorException(4, 99, "This message will never print!");
+                // will throw an exception itself, bad bitKey
+                throw NECProjectorException.CreateNewFromValues(0, 99);
             }
             catch ( Exception ex )
             {
-                // will instead print "byteKey=4: bad argument to NECProjectorException constructor."
+                // will instead print "bitKey=99: bad argument to..."
                 Console.WriteLine(ex.Message);
             }
         }
@@ -101,21 +94,6 @@ namespace CaveTests
             try
             {
                 Console.WriteLine("-----Test 6-----");
-                // constructor will throw an exception itself, bad bitKey
-                throw new NECProjectorException(0, 99, "This message will never print either!");
-            }
-            catch ( Exception ex )
-            {
-                // will instead print "bitKey=99: bad argument to NECProjectorException constructor."
-                Console.WriteLine(ex.Message);
-            }
-        }
-
-        static void Test7()
-        {
-            try
-            {
-                Console.WriteLine("-----Test 7-----");
                 throw new NECProjectorException();
             }
             // catch the parent class
@@ -126,11 +104,11 @@ namespace CaveTests
             }
         }
 
-        static void Test8()
+        static void Test7()
         {
             try
             {
-                Console.WriteLine("-----Test 8-----");
+                Console.WriteLine("-----Test 7-----");
                 throw new NECProjectorCommandException(0x02, 0x0f);
             }
             catch ( Exception ex )
@@ -142,11 +120,11 @@ namespace CaveTests
             }
         }
 
-        static void Test9()
+        static void Test8()
         {
             try
             {
-                Console.WriteLine("-----Test 9-----");
+                Console.WriteLine("-----Test 8-----");
                 throw new NECProjectorCommandException(0x02, 0x0f, "A custom message.");
             }
             catch ( Exception ex )
@@ -158,11 +136,11 @@ namespace CaveTests
             }
         }
 
-        static void Test10()
+        static void Test9()
         {
             try
             {
-                Console.WriteLine("-----Test 10-----");
+                Console.WriteLine("-----Test 9-----");
                 // constructor will throw an exception itself, bad tuple f00d
                 throw new NECProjectorCommandException(0xf0, 0x0d, "Sprinkles.");
             }
@@ -175,11 +153,11 @@ namespace CaveTests
             }
         }
 
-        static void Test11()
+        static void Test10()
         {
             try
             {
-                Console.WriteLine("-----Test 11-----");
+                Console.WriteLine("-----Test 10-----");
                 throw new NECProjectorCommandException();
             }
             // catch the parent
@@ -191,12 +169,12 @@ namespace CaveTests
             }
         }
 
-        static void Test12()
+        static void Test11()
         {
             try
             {
                 // DeviceException -> DeviceCommandException -> NECProjectorCommandException
-                Console.WriteLine("-----Test 12-----");
+                Console.WriteLine("-----Test 11-----");
                 throw new NECProjectorCommandException();
             }
             // catch the grandparent

@@ -1,5 +1,7 @@
-- Rework exception system.  Poor exception handling is losing stack trace
-info & it's ugly all around.
+- Continue working on exceptions.
+
+I think I'm going to create a static CreateNew() factory method for both
+exceptions and use that for instantiating them instead of the constructors.
 
 
 - Implement a configuration file/database reader system for the RPi apps.

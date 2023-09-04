@@ -82,7 +82,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         public override string Message{ get => _message; }
 
         /// <summary>
-        /// Default constructor
+        /// Default parameterless constructor.
         /// </summary>
         public NECProjectorException() 
             : base() 
@@ -91,34 +91,39 @@ namespace Cave.DeviceControllers.Projectors.NEC
         }
 
         /// <summary>
-        /// Constructor taking a pair of keys and optionally a custom error message.  The keys are a byte position and
-        /// bit value used to index into a dictionary mapped over a bitfield.  The dictionary contains error messages
-        /// provided by the NEC documentation.  If the bit value bitwise ANDed with the byte value is not equal to zero
-        /// the error condition associated with that byte and bit combination is true. The keys are checked for
-        /// existing even if a custom message is provided, partly to ensure our documentation is correct.  If there is
-        /// no entry in the dictionary matching these keys, an <see cref="ArgumentException"/> is thrown.  If a custom
-        /// message is provided, it is used in place of the dictionary-provided one for throwing more meaningful
-        /// exceptions.
+        /// Constructor taking a string message.  If parameter <paramref name="message"/> is null, the default of
+        /// "Unknown NEC projector error" is used instead.
         /// </summary>
-        /// <param name="byteKey">Position of the byte to compare in the bitfield.</param>
-        /// <param name="bitKey">Bit value to bitwise AND with the byte value to determine whether an error is set.
-        /// </param>
-        /// <param name="customMessage">A message to use in place of the default one provided by the dictionary.
-        /// </param>
+        /// <param name="message">Message indicating the error.</param>
+        public NECProjectorException(string? message)
+            : this()
+        {
+            _message = message ?? _message;
+        }
+
+        /// <summary>
+        /// Static method taking a pair of keys and returning a matching <see cref="NECProjectorException"/> instance.  
+        /// The keys are a byte position and bit value used to index into a dictionary containing error messages
+        /// provided by NEC's documentation.  If there is no entry in the dictionary matching these keys, an
+        /// <see cref="ArgumentException"/> is thrown.
+        /// </summary>
+        /// <param name="byteKey">Dictionary key 1.</param>
+        /// <param name="bitKey">Dictionary key 2.</param>
+        /// <returns>A new <see cref="NECProjectorException"/> with a message retrieved from the dictionary using the
+        /// provided keys.</returns>
         /// <exception cref="ArgumentException">Thrown if no entry is found in the dictionary using the provided
         /// keys.
         /// </exception>
-        public NECProjectorException( int byteKey, int bitKey, string? customMessage = null )
-            : this()
+        public static NECProjectorException CreateNewFromValues(int byteKey, int bitKey)
         {
             if ( ! ErrorStates.TryGetValue(byteKey, out var innerDictionary) ||
-                 ! ErrorStates[byteKey].TryGetValue(bitKey, out string? defaultMessage) )
+                 ! ErrorStates[byteKey].TryGetValue(bitKey, out string? message) )
                 throw new ArgumentException(
                     /* Determine and show which key was bad */
                     ((innerDictionary is null) ? $"{nameof(byteKey)}={byteKey}" : $"{nameof(bitKey)}={bitKey}")
-                    + $": bad argument to {nameof(NECProjectorException)} constructor."
+                    + $": bad argument to {nameof(NECProjectorException)}.{nameof(CreateNewFromValues)}()."
                 );
-            _message = (customMessage ?? defaultMessage) ?? _message;
+            return new NECProjectorException(message);
         }
 
         /// <summary>
@@ -143,7 +148,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                         int bitKey = innerKeyValuePair.Key;
                         string? errorMsg = innerKeyValuePair.Value;
                         if ( ( relevantBytes[byteKey] & bitKey ) != 0 && errorMsg != null )
-                            errorsReported.Add(new NECProjectorException(byteKey, bitKey));
+                            errorsReported.Add(NECProjectorException.CreateNewFromValues(byteKey, bitKey));
                     }
                 }
             }

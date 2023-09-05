@@ -1,5 +1,4 @@
 using Cave.Interfaces;
-using Cave.Utils;
 
 namespace Cave.DeviceControllers.Projectors
 {

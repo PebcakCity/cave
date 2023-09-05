@@ -1,13 +1,12 @@
-using NLog;
 using System.Net.Sockets;
 
-using Cave.Interfaces;
+using NLog;
 
 namespace Cave.DeviceControllers.Projectors.NEC
 {
     public class SocketClient : INECClient
     {
-        private static readonly Logger Logger = LogManager.GetLogger("NEC.Client");
+        private static readonly Logger Logger = LogManager.GetLogger("NEC.SocketClient");
         private readonly NetworkDeviceConnectionInfo ConnectionInfo;
 
         private SocketClient(NetworkDeviceConnectionInfo connectionInfo)
@@ -15,13 +14,10 @@ namespace Cave.DeviceControllers.Projectors.NEC
             this.ConnectionInfo = connectionInfo;
         }
 
-        public static async Task<SocketClient> Create(IDeviceConnectionInfo connectionInfo)
+        public static async Task<SocketClient> Create(NetworkDeviceConnectionInfo networkInfo)
         {
             try
             {
-                if ( connectionInfo is not NetworkDeviceConnectionInfo networkInfo )
-                    throw new InvalidOperationException("Invalid connection info.");
-                
                 Logger.Info("Creating new NEC.SocketClient instance.");
                 SocketClient instance = new(networkInfo);
                 Logger.Info($"Attempting connection to: {networkInfo.IPAddress}:{networkInfo.Port}");
@@ -38,18 +34,16 @@ namespace Cave.DeviceControllers.Projectors.NEC
         {
             try
             {
-                using Socket socket = new Socket(AddressFamily.InterNetwork,
-                    SocketType.Stream, ProtocolType.Tcp);
-                CancellationTokenSource cts = new();
+                using Socket socket = new (AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                using CancellationTokenSource cts = new();
                 cts.CancelAfter(3000);
-                var token = cts.Token;
-                await socket.ConnectAsync(ConnectionInfo.IPAddress, ConnectionInfo.Port, token);
+                await socket.ConnectAsync(ConnectionInfo.IPAddress, ConnectionInfo.Port, cts.Token);
                 Logger.Info($"Connection success.");
                 socket.Shutdown(SocketShutdown.Both);
             }
             catch(OperationCanceledException)
             {
-                /* Rethrow with a useful error message */
+                /* Rethrow with a slightly more useful error message */
                 string error = "Connection attempt timed out.";
                 Logger.Error(error);
                 throw new OperationCanceledException(error);
@@ -67,25 +61,24 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 byte[] responseBytes = new byte[512];
 
-                CancellationTokenSource cts = new();
-                CancellationToken token = cts.Token;
+                using Socket socket = new(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                using CancellationTokenSource cts = new();
+
                 cts.CancelAfter(2000);
+                await socket.ConnectAsync(ConnectionInfo.IPAddress, ConnectionInfo.Port, cts.Token);
 
-                using Socket socket = new(AddressFamily.InterNetwork,
-                    SocketType.Stream, ProtocolType.Tcp);
-                await socket.ConnectAsync(ConnectionInfo.IPAddress, ConnectionInfo.Port);
-
-                Logger.Info($"Sending command: {toSend}");
-                int bytesSent = await socket.SendAsync(toSend.Data.ToArray(), SocketFlags.None, token);
+                Logger.Debug($"Sending command: {toSend}");
+                cts.CancelAfter(2000);
+                int bytesSent = await socket.SendAsync(toSend.Data.ToArray(), SocketFlags.None, cts.Token);
                 Logger.Debug($"Sent {bytesSent} bytes.");
 
                 cts.CancelAfter(2000);
-                int bytesRead = await socket.ReceiveAsync(responseBytes, SocketFlags.None, token);
+                int bytesRead = await socket.ReceiveAsync(responseBytes, SocketFlags.None, cts.Token);
                 Logger.Debug($"Read {bytesRead} bytes.");
 
                 socket.Shutdown(SocketShutdown.Both);
                 Response response = new(responseBytes[0..bytesRead]);
-                Logger.Info($"Received response: {response}");
+                Logger.Debug($"Received response: {response}");
                 return response;
             }
             catch(OperationCanceledException)

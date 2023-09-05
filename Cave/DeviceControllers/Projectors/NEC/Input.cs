@@ -1,5 +1,4 @@
 using Ardalis.SmartEnum;
-using Cave.Utils;
 
 namespace Cave.DeviceControllers.Projectors.NEC
 {

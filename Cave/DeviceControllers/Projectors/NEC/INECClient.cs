@@ -1,6 +1,4 @@
-﻿using Cave.Interfaces;
-
-namespace Cave.DeviceControllers.Projectors.NEC
+﻿namespace Cave.DeviceControllers.Projectors.NEC
 {
     public interface INECClient
     {

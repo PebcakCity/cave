@@ -1,13 +1,13 @@
 using System.IO;
 using System.Net.Http;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Xml;
 
 using NLog;
 
 using Cave.Interfaces;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 
 namespace Cave.DeviceControllers.Televisions.Roku
 {

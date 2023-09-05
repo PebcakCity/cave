@@ -1,4 +1,3 @@
-using System;
 using System.Reflection;
 
 namespace Cave.DeviceControllers.Projectors.NEC

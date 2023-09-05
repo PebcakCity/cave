@@ -121,20 +121,23 @@ namespace Cave.DisplayTester
                 DisplayMessage(status.Message);
         }
 
-        public void OnError( Exception exception )
+        public void OnError( Exception ex )
         {
-            string errorText = "";
-            if ( exception is AggregateException ae )
+            string errorText = string.Empty;
+            switch (ex)
             {
-                errorText += ae.Message + Environment.NewLine;
-                foreach ( Exception e in ae.InnerExceptions )
-                {
-                    errorText += ( e.Message ) + Environment.NewLine;
-                }
-            }
-            else if ( exception is Exception e )
-            {
-                errorText += e.GetType() + " :: " + e.Message;
+                case AggregateException ae:
+                    errorText += ae.Message + Environment.NewLine;
+                    foreach ( Exception e in ae.InnerExceptions )
+                        errorText += " - " + e.Message + Environment.NewLine;
+                    break;
+                // Display our own exceptions using ToString() (no stack trace for these)
+                case DeviceException de:
+                    errorText += de.ToString();
+                    break;
+                default:
+                    errorText += ex.GetType().Name + " :: " + ex.Message;
+                    break;
             }
             DisplayMessage(errorText);
         }

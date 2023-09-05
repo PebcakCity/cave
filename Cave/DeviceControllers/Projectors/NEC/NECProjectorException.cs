@@ -106,7 +106,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// <summary>
         /// Static method taking a pair of keys and returning a matching <see cref="NECProjectorException"/> instance.  
         /// The keys are used to retrieve an error message from a dictionary of error messages provided in NEC's
-        /// documentation.  If either key is invalid, an <see cref="ArgumentOutOfRangeException"/> is thrown.
+        /// documentation.  If either key argument is invalid, an <see cref="ArgumentOutOfRangeException"/> is thrown
+        /// for that argument.
         /// </summary>
         /// <param name="byteKey">Dictionary key 1.</param>
         /// <param name="bitKey">Dictionary key 2.</param>
@@ -119,18 +120,22 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 if ( dictionaryForByte.TryGetValue(bitKey, out var message) )
                     return new NECProjectorException(message);
-                throw new ArgumentOutOfRangeException(nameof(bitKey));
+                throw new ArgumentOutOfRangeException(nameof(bitKey), bitKey,
+                    $"Bad argument to {nameof(NECProjectorException)}.{nameof(CreateNewFromValues)}()");
             }
-            throw new ArgumentOutOfRangeException(nameof(byteKey));
+            throw new ArgumentOutOfRangeException(nameof(byteKey), byteKey,
+                $"Bad argument to {nameof(NECProjectorException)}.{nameof(CreateNewFromValues)}()");
         }
 
         /// <summary>
         /// Reads the data from the <see cref="Response"/> to a GetErrors <see cref="Command"/> and parses it for
-        /// reported errors.  Device error information is contained in a bitfield spanning the 6th through 9th bytes of
-        /// the response.
+        /// reported errors.  Device error information is contained in a bitfield primarily spanning the 6th through
+        /// 9th bytes of the response.
         /// </summary>
-        /// <param name="response"><see cref="Response"/> returned by the projector.</param>
-        /// <returns>A list of <see cref="NECProjectorException"/> instances reported in the response.</returns>
+        /// <param name="response"><see cref="Response"/> object containing the projector's response to a
+        /// <see cref="Command.GetErrors"/> command.</param>
+        /// <returns>A list of <see cref="NECProjectorException"/> instances matching error bits set in the response.
+        /// </returns>
         public static List<NECProjectorException> GetErrorsFromResponse( Response response )
         {
             List<NECProjectorException> errorsReported = new();
@@ -147,7 +152,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                         int bitKey = innerKeyValuePair.Key;
                         string? errorMsg = innerKeyValuePair.Value;
                         if ( ( relevantBytes[byteKey] & bitKey ) != 0 && errorMsg != null )
-                            errorsReported.Add(NECProjectorException.CreateNewFromValues(byteKey, bitKey));
+                            errorsReported.Add(CreateNewFromValues(byteKey, bitKey));
                     }
                 }
             }

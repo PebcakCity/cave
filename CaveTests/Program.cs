@@ -15,6 +15,8 @@ namespace CaveTests
             Test4();
             Test5();
             Test6();
+            Test7();
+            Test8();
         }
 
         static void Test1()
@@ -26,7 +28,7 @@ namespace CaveTests
             }
             catch (Exception ex)
             {
-                // will print "Unknown NEC projector error" because the default message in the dictionary is null
+                // will print "Unknown NEC projector error" because the dictionary entry at (0, 4) is null
                 Console.WriteLine(ex.Message);
             }
         }
@@ -69,7 +71,7 @@ namespace CaveTests
             }
             catch ( Exception ex )
             {
-                // will instead print "byteKey=4: bad argument to..."
+                // will print ArgumentOutOfRangeException's message
                 Console.WriteLine(ex.Message);
             }
         }
@@ -84,23 +86,25 @@ namespace CaveTests
             }
             catch ( Exception ex )
             {
-                // will instead print "bitKey=99: bad argument to..."
+                // will print ArgumentOutOfRangeException's message
                 Console.WriteLine(ex.Message);
             }
         }
+
 
         static void Test6()
         {
             try
             {
                 Console.WriteLine("-----Test 6-----");
-                throw new NECProjectorException();
+                throw NECProjectorCommandException.CreateNewFromValues(0x02, 0x0f);
             }
-            // catch the parent class
-            catch ( DeviceException ex )
+            catch ( Exception ex )
             {
-                // will print "Unknown NEC projector error."
+                // will print "There is no authority necessary for the operation."
                 Console.WriteLine(ex.Message);
+                // will print "NECProjectorCommandException: (020f) There is no authority necessary for the operation."
+                Console.WriteLine(ex);
             }
         }
 
@@ -109,13 +113,14 @@ namespace CaveTests
             try
             {
                 Console.WriteLine("-----Test 7-----");
-                throw new NECProjectorCommandException(0x02, 0x0f);
+                // will throw ArgumentOutOfRangeException
+                throw NECProjectorCommandException.CreateNewFromValues(0xf0, 0x0d);
             }
             catch ( Exception ex )
             {
-                // will print "There is no authority necessary for the operation."
+                // message only
                 Console.WriteLine(ex.Message);
-                // will print "NECProjectorCommandException 020f - There is no authority necessary for the operation."
+                // stacktrace and all
                 Console.WriteLine(ex);
             }
         }
@@ -125,62 +130,12 @@ namespace CaveTests
             try
             {
                 Console.WriteLine("-----Test 8-----");
-                throw new NECProjectorCommandException(0x02, 0x0f, "A custom message.");
+                throw new NECProjectorCommandException("No can do.");
             }
             catch ( Exception ex )
             {
-                // will print "A custom message."
-                Console.WriteLine(ex.Message);
-                // will print "NECProjectorCommandException 020f - A custom message."
+                // will print "NECProjectorCommandException: No can do."
                 Console.WriteLine(ex);
-            }
-        }
-
-        static void Test9()
-        {
-            try
-            {
-                Console.WriteLine("-----Test 9-----");
-                // constructor will throw an exception itself, bad tuple f00d
-                throw new NECProjectorCommandException(0xf0, 0x0d, "Sprinkles.");
-            }
-            catch ( Exception ex )
-            {
-                // will print Message of ArgumentException - "(xx, xx): bad argument to NECProjectorCommandException constructor."
-                Console.WriteLine(ex.Message);
-                // will print Message and full stack trace for the ArgumentException
-                Console.WriteLine(ex);
-            }
-        }
-
-        static void Test10()
-        {
-            try
-            {
-                Console.WriteLine("-----Test 10-----");
-                throw new NECProjectorCommandException();
-            }
-            // catch the parent
-            catch( DeviceCommandException ex )
-            {
-                Console.WriteLine(ex.Message);
-                // I temporarily made ErrorTuple public... as expected, it's (0, 0) (int default)
-                // Console.WriteLine(((NECProjectorCommandException) ex).ErrorTuple);
-            }
-        }
-
-        static void Test11()
-        {
-            try
-            {
-                // DeviceException -> DeviceCommandException -> NECProjectorCommandException
-                Console.WriteLine("-----Test 11-----");
-                throw new NECProjectorCommandException();
-            }
-            // catch the grandparent
-            catch ( DeviceException ex )
-            {
-                Console.WriteLine($"I caught this for you! It almost slipped by... {ex}");
             }
         }
 

@@ -126,7 +126,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await Client!.SendCommandAsync(Command.GetStatus);
                 if ( response.IndicatesFailure )
-                    throw new NECProjectorCommandException(response.Data[5], response.Data[6]);
+                    throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6]);
 
                 Info.PowerState = PowerState.FromValue(response.Data[6]);
                 var inputTuple = (response.Data[8], response.Data[9]);
@@ -182,7 +182,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await Client!.SendCommandAsync(Command.GetLampInfo.Prepare(0x00, (byte)lampInfo));
                 if ( response.IndicatesFailure )
-                    throw new NECProjectorCommandException(response.Data[5], response.Data[6]);
+                    throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6]);
 
                 int value = BitConverter.ToInt32(response.Data[7..11], 0);
                 switch ( lampInfo )
@@ -313,7 +313,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await Client!.SendCommandAsync(Command.PowerOn);
                 if ( response.IndicatesFailure )
-                    throw new NECProjectorCommandException(response.Data[5], response.Data[6]);
+                    throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6]);
 
                 while ( !deviceReady && failureReason is null )
                 {
@@ -446,7 +446,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await Client!.SendCommandAsync(Command.PowerOff);
                 if ( response.IndicatesFailure )
-                    throw new NECProjectorCommandException(response.Data[5], response.Data[6]);
+                    throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6]);
             }
             catch ( Exception ex )
             {
@@ -474,7 +474,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await Client!.SendCommandAsync(muted ? Command.VideoMuteOn : Command.VideoMuteOff);
                 if ( response.IndicatesFailure )
-                    throw new NECProjectorCommandException(response.Data[5], response.Data[6]);
+                    throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6]);
 
                 Info.IsDisplayMuted = muted;
                 NotifyObservers(string.Format("Video mute {0}", ( muted ? "ON" : "OFF" )));
@@ -538,7 +538,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 var response = await Client!.SendCommandAsync(Command.SelectInput.Prepare(input));
 
                 if ( response.IndicatesFailure )
-                    throw new NECProjectorCommandException(response.Data[5], response.Data[6]);
+                    throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6]);
 
                 Info.InputSelected = input;
                 NotifyObservers($"Input '{input}' selected.", MessageType.Success);
@@ -599,7 +599,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {// relative adjustment, +1 volume unit
                 var response = await Client!.SendCommandAsync(Command.VolumeAdjust.Prepare(0x01, 0x01, 0x00));
                 if ( response.IndicatesFailure )
-                    throw new NECProjectorCommandException(response.Data[5], response.Data[6]);
+                    throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6]);
 
                 NotifyObservers("Volume +1");
             }
@@ -634,7 +634,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 
                 var response = await Client!.SendCommandAsync(Command.VolumeAdjust.Prepare(0x01, unchecked((byte)~0x01), 0x00));
                 if ( response.IndicatesFailure )
-                    throw new NECProjectorCommandException(response.Data[5], response.Data[6]);
+                    throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6]);
 
                 NotifyObservers("Volume -1 (maybe)");
             }
@@ -662,7 +662,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await Client!.SendCommandAsync(muted ? Command.AudioMuteOn : Command.AudioMuteOff);
                 if ( response.IndicatesFailure )
-                    throw new NECProjectorCommandException(response.Data[5], response.Data[6]);
+                    throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6]);
 
                 Info.IsAudioMuted = muted;
                 NotifyObservers(string.Format("Audio mute {0}", ( muted ? "ON" : "OFF" )));

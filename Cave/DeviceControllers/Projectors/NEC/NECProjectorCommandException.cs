@@ -17,7 +17,7 @@
             { (0x01, 0x02), "The specified language is invalid." },
             { (0x02, 0x00), "Memory allocation error" },
             { (0x02, 0x02), "Memory in use" },
-            { (0x02, 0x03), "The specified value cannot be set. (Has the device finished powering on yet?)" },
+            { (0x02, 0x03), "The specified value cannot be set. (Is the device on?)" },
             { (0x02, 0x04), "Forced onscreen mute on" },
             { (0x02, 0x06), "Viewer error" },
             { (0x02, 0x07), "No signal" },
@@ -35,14 +35,10 @@
 
         private readonly string _message;
 
-        private (int Byte1, int Byte2) ErrorTuple { get; init; }
-
-        private string ErrorCode { get => string.Format("{0:x2}{1:x2}", ErrorTuple.Byte1, ErrorTuple.Byte2); }
-
         public override string Message { get => _message; }
 
         /// <summary>
-        /// Default constructor
+        /// Default parameterless constructor
         /// </summary>
         public NECProjectorCommandException() 
             : base()
@@ -51,40 +47,59 @@
         }
 
         /// <summary>
-        /// Constructor taking a tuple of two <see cref="int"/> values and an optional custom error message.  The value
-        /// tuple is used as a dictionary key to retrieve a default associated error message from a static dictionary.
-        /// If the key does not exist in the error dictionary, an <see cref="ArgumentException"/> is thrown. If a
-        /// custom message is provided, it is used in place of the default message.
+        /// Constructor taking a string message.  If parameter <paramref name="message"/> is null, the default of
+        /// "Command failed for unknown reason" is used instead.
         /// </summary>
-        /// <param name="errorValues">A value tuple of two <see cref="int"/> values.</param>
-        /// <param name="customMessage">A message to use in place of the default one provided by the dictionary.
-        /// </param>
-        /// <exception cref="ArgumentException">Thrown if the argument to the constructor is determined to be invalid,
-        /// that is, there is no known NEC projector error code matching this tuple.</exception>
-        public NECProjectorCommandException((int byte1, int byte2) errorValues, string? customMessage = null)
+        /// <param name="message">Message indicating the reason for command failure.</param>
+        public NECProjectorCommandException(string? message)
             : this()
         {
-            ErrorTuple = errorValues;
-            if ( ! ErrorCodes.TryGetValue(ErrorTuple, out string? defaultMessage) )
-                throw new ArgumentException(
-                    $"{ErrorTuple}: bad argument to {nameof(NECProjectorCommandException)} constructor."
-                );
-            _message = (customMessage ?? defaultMessage) ?? _message;
+            _message = message ?? _message;
         }
 
         /// <summary>
-        /// Constructor taking two <see cref="int"/> values, plus an optional
-        /// custom error message.  Combines the two ints into a tuple and calls
-        /// the overload taking a tuple and string.
+        /// Static factory method taking a tuple of two <see cref="int"/> values and returning a matching
+        /// <see cref="NECProjectorCommandException"/>.  The value tuple is used as a dictionary key to retrieve an
+        /// associated error message from a static dictionary.  If the key does not exist in the error dictionary,
+        /// an <see cref="ArgumentOutOfRangeException"/> is thrown.
+        /// </summary>
+        /// <param name="errorTuple">A value tuple of two <see cref="int"/> values.</param>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if the tuple argument is determined to be invalid,
+        /// that is, there is no known NEC projector error code matching this tuple.</exception>
+        /// <returns><see cref="NECProjectorCommandException"/> instance with message retrieved using the provided
+        /// tuple.</returns>
+        public static NECProjectorCommandException CreateNewFromValues((int byte1, int byte2) errorTuple)
+        {
+            if ( ! ErrorCodes.TryGetValue(errorTuple, out string? message) )
+                throw new ArgumentOutOfRangeException(
+                    nameof(errorTuple), errorTuple,
+                    $"Bad argument to {nameof(NECProjectorCommandException)}.{nameof(CreateNewFromValues)}()"
+                );
+            var ex = new NECProjectorCommandException(message);
+            ex.Data.Add("ErrorCode", string.Format("{0:x2}{1:x2}", errorTuple.byte1, errorTuple.byte2));
+            return ex;
+        }
+
+        /// <summary>
+        /// Static factory method taking two <see cref="int"/> values and returning a matching
+        /// <see cref="NECProjectorCommandException"/>.  The values are packaged as a tuple and passed to the
+        /// <see cref="CreateNewFromValues"/> overload taking a tuple.
         /// </summary>
         /// <param name="byte1">Value 1</param>
         /// <param name="byte2">Value 2</param>
-        /// <param name="customMessage">A message to use in place of the default one provided by the dictionary.
-        /// </param>
-        public NECProjectorCommandException(int byte1, int byte2, string? customMessage = null) 
-            : this((byte1, byte2), customMessage) { }
+        /// <returns><see cref="NECProjectorCommandException"/> instance with message retrieved using the provided
+        /// values.</returns>
+        public static NECProjectorCommandException CreateNewFromValues( int byte1, int byte2 )
+        {
+            return CreateNewFromValues((byte1, byte2));
+        }
 
-        public override string ToString() => $"{nameof(NECProjectorCommandException)} {ErrorCode} - {Message}";
+        public override string ToString()
+        {
+            var errorCode = Data.Contains("ErrorCode") ? Data["ErrorCode"] : null;
+            return $"{nameof(NECProjectorCommandException)}: " +
+                ((errorCode is null) ? $"{Message}" : $"({errorCode}) {Message}");
+        }
 
         public static implicit operator string(NECProjectorCommandException ex) => ex.ToString();
     }

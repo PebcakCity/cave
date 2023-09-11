@@ -75,7 +75,8 @@ namespace Cave.DisplayTester
         private readonly Dictionary<string, int> DisplayTypes = new()
         {
             { "NECProjector", 7142 },
-            { "RokuTV", 8060 }
+            { "RokuTV", 8060 },
+            { "NECProjector (serial)", 38400 }
         };
 
         private readonly Logger Logger = LogManager.GetCurrentClassLogger();
@@ -195,30 +196,49 @@ namespace Cave.DisplayTester
             // Fill in the default port #
             ComboBoxText cb = (ComboBoxText)sender;
             EntryPort.Text = DisplayTypes.GetValueOrDefault(cb.ActiveText).ToString();
+            // hack for serial support
+            if ( cb.ActiveText == "NECProjector (serial)" )
+            {
+                EntryAddress.PlaceholderText = "Serial port";
+                EntryPort.PlaceholderText = "Baudrate";
+            }
+            else
+            {
+                EntryAddress.PlaceholderText = "IP Address";
+                EntryPort.PlaceholderText = "Port";
+            }
         }
 
         private async void ButtonConnect_Clicked( object sender, EventArgs a )
         {
             try
             {
-                var ipAddress = EntryAddress.Text;
-                var port = Convert.ToInt32(EntryPort.Text);
+                var addressOrDevice = EntryAddress.Text;
+                var portOrBaudrate = Convert.ToInt32(EntryPort.Text);
 
                 var deviceClass = ComboBoxDeviceClass.ActiveText;
 
-                if ( ! string.IsNullOrWhiteSpace(ipAddress) && port != 0 )
+                if ( ! string.IsNullOrWhiteSpace(addressOrDevice) && portOrBaudrate != 0 )
                 {
                     switch ( deviceClass )
                     {
                         case nameof(NECProjector):
-                            var connectionInfo = new NetworkDeviceConnectionInfo(ipAddress, port);
+                            var connectionInfo = new NetworkDeviceConnectionInfo(addressOrDevice, portOrBaudrate);
                             DisplayDevice = new NECProjector("Office projector", connectionInfo);
                             Unsubscriber = DisplayDevice.Subscribe(this);
                             await DisplayDevice.Initialize();
                             EnableControlsForDevice(DisplayDevice);
                             break;
                         case nameof(RokuTV):
-                            DisplayDevice = new RokuTV("Home TV", ipAddress, port);
+                            DisplayDevice = new RokuTV("Home TV", addressOrDevice, portOrBaudrate);
+                            Unsubscriber = DisplayDevice.Subscribe(this);
+                            await DisplayDevice.Initialize();
+                            EnableControlsForDevice(DisplayDevice);
+                            break;
+                            // hack for serial support
+                        case "NECProjector (serial)":
+                            var serialInfo = new SerialDeviceConnectionInfo(addressOrDevice, portOrBaudrate);
+                            DisplayDevice = new NECProjector("Office projector", serialInfo);
                             Unsubscriber = DisplayDevice.Subscribe(this);
                             await DisplayDevice.Initialize();
                             EnableControlsForDevice(DisplayDevice);

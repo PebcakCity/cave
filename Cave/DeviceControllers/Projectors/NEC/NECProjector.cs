@@ -63,8 +63,9 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 if ( ConnectionInfo is NetworkDeviceConnectionInfo networkInfo )
                     this.Client = await SocketClient.Create(networkInfo);
-                else
-                    throw new NotImplementedException("Clients only currently available for network devices.");
+                else if ( ConnectionInfo is SerialDeviceConnectionInfo serialInfo )
+                    //throw new NotImplementedException("Clients only currently available for network devices.");
+                    this.Client = await SerialClient.Create(serialInfo);
 
                 await GetModelNumber();
                 await GetSerialNumber();

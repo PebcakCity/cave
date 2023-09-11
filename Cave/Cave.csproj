@@ -9,6 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Ardalis.SmartEnum" Version="7.0.0" />
     <PackageReference Include="NLog" Version="5.2.2" />
+    <PackageReference Include="System.IO.Ports" Version="7.0.0" />
   </ItemGroup>
 
 </Project>

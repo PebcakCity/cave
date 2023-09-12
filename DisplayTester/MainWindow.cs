@@ -72,7 +72,7 @@ namespace Cave.DisplayTester
 #pragma warning restore CS0414
 
 
-        private readonly Dictionary<string, int> DisplayTypes = new()
+        private readonly Dictionary<string, int> DisplayConnectionInfo = new()
         {
             { "NECProjector", 7142 },
             { "RokuTV", 8060 },
@@ -83,8 +83,9 @@ namespace Cave.DisplayTester
         private Cave.DeviceControllers.Device DisplayDevice = null;
         private IDisposable Unsubscriber = null;
 
-        private bool DisplayMuted;
-        private bool AudioMuted;
+        private bool IsDisplayMuted;
+        private bool IsAudioMuted;
+        private bool IsWindowFullscreen = false;
 
 
         public MainWindow() : this(new Builder("MainWindow.glade")) { }
@@ -93,7 +94,9 @@ namespace Cave.DisplayTester
         {
             builder.Autoconnect(this);
 
-            DeleteEvent += Window_DeleteEvent;
+            DeleteEvent += WindowDeleteEventHandler;
+            WindowStateEvent += WindowStateEventHandler;
+            KeyPressEvent += KeyPressEventHandler;
 
             Initialize();
         }
@@ -116,8 +119,8 @@ namespace Cave.DisplayTester
 
         public void OnNext( DeviceInfo status )
         {
-            this.DisplayMuted = status.IsDisplayMuted;
-            this.AudioMuted = status.IsAudioMuted;
+            this.IsDisplayMuted = status.IsDisplayMuted;
+            this.IsAudioMuted = status.IsAudioMuted;
             if ( status.Message != null )
                 DisplayMessage(status.Message);
         }
@@ -153,7 +156,7 @@ namespace Cave.DisplayTester
             // Set ComboBoxDeviceClass model & select first item
             ListStore classStore = new(typeof(string));
             ComboBoxDeviceClass.Model = classStore;
-            foreach ( string className in DisplayTypes.Keys )
+            foreach ( string className in DisplayConnectionInfo.Keys )
                 classStore.AppendValues(className);
 
             TreeIter iter;
@@ -185,9 +188,26 @@ namespace Cave.DisplayTester
             EntryPort.Sensitive = true;
         }
 
-        private void Window_DeleteEvent( object sender, DeleteEventArgs a )
+        private void WindowDeleteEventHandler( object sender, DeleteEventArgs args )
         {
             Application.Quit();
+        }
+
+        private void KeyPressEventHandler( object sender, KeyPressEventArgs args )
+        {
+            if (args.Event.Key == Gdk.Key.F11 )
+            {
+                if ( this.IsWindowFullscreen )
+                    this.Unfullscreen();
+                else
+                    this.Fullscreen();
+            }
+        }
+
+        private void WindowStateEventHandler( object sender, WindowStateEventArgs args )
+        {
+            if ( args.Event.ChangedMask.HasFlag(Gdk.WindowState.Fullscreen) )
+                this.IsWindowFullscreen = !this.IsWindowFullscreen;
         }
 
 
@@ -195,7 +215,7 @@ namespace Cave.DisplayTester
         {
             // Fill in the default port #
             ComboBoxText cb = (ComboBoxText)sender;
-            EntryPort.Text = DisplayTypes.GetValueOrDefault(cb.ActiveText).ToString();
+            EntryPort.Text = DisplayConnectionInfo.GetValueOrDefault(cb.ActiveText).ToString();
             // hack for serial support
             if ( cb.ActiveText == "NECProjector (serial)" )
             {
@@ -586,7 +606,7 @@ namespace Cave.DisplayTester
             {
                 if ( DisplayDevice is Projector pj )
                 {
-                    await pj.DisplayMute(!this.DisplayMuted);
+                    await pj.DisplayMute(!this.IsDisplayMuted);
                 }
             }
             catch ( Exception ex )
@@ -601,7 +621,7 @@ namespace Cave.DisplayTester
             {
                 if ( DisplayDevice is IAudio ia )
                 {
-                    await ia.AudioMute(!this.AudioMuted);
+                    await ia.AudioMute(!this.IsAudioMuted);
                 }
             }
             catch ( Exception ex )

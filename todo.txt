@@ -15,17 +15,70 @@ to be able to display on some sort of "Home screen", along with buttons for
 system on / system off.
 ...
 
+Info a device needs:
+1. What type of device it is (for finding the class?  maybe we don't really need this?)
+2. What controller class it uses
+3. What connection information is needed, if any (is it over a LAN, is it RS232?, address/port/baud info)
+4. What controls it has (specifically what inputs are available but maybe others?
+whether or not to display certain available controls?  icons/images for the buttons?)
+
+
+"devices": {
+    "Projector 1": {
+        "type" : "Projector",
+        "controller" : "NECProjector",
+        "connection" : {
+            "type": "network",
+            "info": {
+                "address": "192.168.1.100",
+                "port": 7142
+            }
+        },
+        "controls": {
+            "inputs": [
+                "RGB1": "computer.png",
+                "HDMI1": "apple.png",
+                "Network": "ethernet.png"
+            ],
+            "defaultInput": "RGB1",
+            "audio": false,
+            "blank": false
+        }
+    },
+    "Projector 2": {
+        ...
+    }
+}
+
+<devices>
+    <device name= "Projector 1" type="Projector" controller="NECProjector">
+        <connection type="network" address="..." port="..."/>
+        <controls>
+            <inputs>
+                <input name="RGB1" image="computer.png"/>
+                ...
+            </inputs>
+            <defaultInput>RGB1</defaultInput>
+            <showAudio>false</showAudio>
+            <showBlank>false</showBlank>
+        </controls>
+    </device>
+    ...
+</devices>
+
+---------------------
+
 Sources : { 
     "PC": [
-        "Projector": "RGB1",
+        "Projector 1": "RGB1",
         "AV switcher": "Input1"
     ],
     "Laptop": [
-        "Projector": "RGB1",
+        "Projector 1": "RGB1",
         "AV switcher": "Input2"
     ],
     "Apple TV": [
-        "Projector": "HDMI1"
+        "Projector 1": "HDMI1"
     ]
 }
 
@@ -80,6 +133,36 @@ async Task SelectSource(string sourceName)
     {
         throw;
     }
+}
+
+SystemOnButton()
+{
+    for device in devices:
+        switch( device_type )
+            case projector:
+                if has_default_input:
+                    await PowerOnSelectInput(default_input)
+                else
+                    await PowerOn()
+            case tv:
+                if has_default_input:
+                    await PowerOnSelectInput(default_input)
+                else
+                    await PowerOn()
+            case switcher:
+                // do whatever the hell we decide is the default behavior for these
+}
+
+SystemOffButton()
+{
+    for device in devices:
+        switch( device_type )
+            case projector:
+                await PowerOff()
+            case tv:
+                await PowerOff()
+            case switcher:
+                // same ...
 }
 
 -------------------------------

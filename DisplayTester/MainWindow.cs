@@ -407,7 +407,7 @@ namespace Cave.DisplayTester
                 switch ( DisplayDevice )
                 {
                     case NECProjector nec:
-                        await nec.PowerOnSelectInput("Video");
+                        await nec.PowerOnSelectInput("Network");
                         break;
                     case RokuTV roku:
                         await roku.SelectInput("InputTuner");

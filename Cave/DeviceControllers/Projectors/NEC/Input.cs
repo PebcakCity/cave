@@ -53,11 +53,15 @@ namespace Cave.DeviceControllers.Projectors.NEC
         public static readonly Input HDBaseT = new( 0xbf, nameof(HDBaseT) );
         public static readonly Input HDBaseTAlternate = new( 0x20, nameof(HDBaseTAlternate) );
         public static readonly Input SDI = new( 0xc4, nameof(SDI) );
-        /* For mapping between NEC.InputState dictionary and Input enum type:
-            We don't really care about accurately reporting exactly which input we're on as it depends on the specific model.
-            We care about being able to accurately select an input, specifically one of the above, and even more specifically RGB and HDMI.
-            The code '0x1f' corresponds to the USB A input, which is present on most models and serves as a stand-in for inputs like
-            USB, LAN, viewer, "APPS" (whatever that is), and cardslot inputs, which we don't intend to support selecting. */
+
+        /* Have decided to support selecting the LAN/Network input. We have some classrooms where they are using NEC
+         * MultiPresenter software to display over the network and I gotta admit it's pretty slick and I'd kinda like
+         * to see that in more places.  It can seamlessly switch between PC, Mac, iOS, or Android devices with no
+         * cables required except ethernet to the projector.  Plus, with the projectors networked already for control
+         * it just makes sense. */
+        public static readonly Input Network = new( 0x20, nameof(Network) );
+
+        /* "Other" will still switch to the USB input. */
         public static readonly Input Other = new( 0x1f, nameof(Other) );
 
         public Input( int value, string name ): base(name, value){}

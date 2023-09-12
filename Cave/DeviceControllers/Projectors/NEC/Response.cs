@@ -173,7 +173,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 if( idx < Data.Length - 1 )
                     data += " ";
             }
-            return $"Response: {(Name ?? GetMatchingResponseName(this.Data) ?? "[Unknown response]")} [{data}]";
+            return $"Response.{(Name ?? GetMatchingResponseName(this.Data) ?? "[Unknown response]")} [{data}]";
         }
     }
 }

@@ -597,20 +597,19 @@ namespace Cave.DeviceControllers.Projectors.NEC
         public async override Task AudioVolumeUp()
         {
             try
-            {// relative adjustment, +1 volume unit
-                var response = await Client!.SendCommandAsync(Command.VolumeAdjust.Prepare(0x01, 0x01, 0x00));
+            {   
+                // relative adjustment, +2
+                var response = await Client!.SendCommandAsync(Command.VolumeAdjust.Prepare(0x01, 0x02, 0x00));
                 if ( response.IndicatesFailure )
                     throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6]);
 
-                NotifyObservers("Volume +1");
+                NotifyObservers("Volume +2");
             }
             catch ( Exception ex )
             {
                 HandleException(ex);
                 throw;
             }
-
-            //throw new NotImplementedException("This feature is currently unimplemented.");
         }
 
         /// <summary>
@@ -620,32 +619,22 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// <exception cref="NECProjectorCommandException">Thrown if the device
         /// fails to execute the command, such as when the device is in a
         /// state which prevents execution of that command.</exception>
-        /// <remarks>Does not work.  The NEC documentation is unclear (to me)
-        /// as to how to decrease the volume.  Not a high priority to solve
-        /// right now given how infrequently we use the audio functionality on
-        /// our projectors but maybe someone can figure this out?</remarks>
         public async override Task AudioVolumeDown()
         {
             try
-            {// relative adjustment, -1 volume unit
-                // tried both one's and two's complement, not sure how to get this to work,
-                // VolumeUp seems to work fine
-                // tried reversing 2nd and 3rd bytes
-                // documentation is pretty vague about this
-                
-                var response = await Client!.SendCommandAsync(Command.VolumeAdjust.Prepare(0x01, unchecked((byte)~0x01), 0x00));
+            {
+                // relative adjustment, -2
+                var response = await Client!.SendCommandAsync(Command.VolumeAdjust.Prepare(0x01, 0xfe, 0xff));
                 if ( response.IndicatesFailure )
                     throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6]);
 
-                NotifyObservers("Volume -1 (maybe)");
+                NotifyObservers("Volume -2");
             }
             catch ( Exception ex )
             {
                 HandleException(ex);
                 throw;
             }
-
-            //throw new NotImplementedException("This feature is currently unimplemented.");
         }
 
         /// <summary>

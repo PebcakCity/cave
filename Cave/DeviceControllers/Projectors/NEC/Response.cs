@@ -11,7 +11,9 @@ namespace Cave.DeviceControllers.Projectors.NEC
         private static byte wild = (byte)'*';
 
 
-        /* Success responses */
+        /* ------------------------------------------Success responses---------------------------------------------- */
+
+
         public static Response PowerOnSuccess = new( new byte[] { 0x22, 0x00, wild, wild, 0x00, wild }, nameof(PowerOnSuccess) );
         public static Response PowerOffSuccess = new( new byte[] { 0x22, 0x01, wild, wild, 0x00, wild }, nameof(PowerOffSuccess) );
         public static Response SelectInputSuccess = new( new byte[] { 0x22, 0x03, wild, wild, 0x01, wild, wild }, nameof(SelectInputSuccess) );
@@ -22,6 +24,17 @@ namespace Cave.DeviceControllers.Projectors.NEC
             wild,       wild,           wild,           wild,           wild, wild, wild, wild, wild, wild,
         /*  Checksum */    
             wild }, nameof(GetStatusSuccess) );
+
+        public static Response GetInfoSuccess = new( new byte[] { 0x23, 0x8a, wild, wild, 0x62, 
+        /* 98 bytes of data ... */
+            wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild,
+            wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild,
+            wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild,
+            wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild,
+            wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild,
+        /* Checksum */
+            wild,
+        }, nameof(GetInfoSuccess) );
 
         public static Response GetLampInfoSuccess = new( new byte[] { 0x23, 0x96, wild, wild, 0x06,
         /*  Lamp#       What was requested      32-bit int data             Checksum */
@@ -56,13 +69,17 @@ namespace Cave.DeviceControllers.Projectors.NEC
         public static Response VideoMuteOffSuccess = new( new byte[] { 0x22, 0x11, wild, wild, 0x00, wild }, nameof(VideoMuteOffSuccess) );
         public static Response AudioMuteOnSuccess = new( new byte[] { 0x22, 0x12, wild, wild, 0x00, wild }, nameof(AudioMuteOnSuccess) );
         public static Response AudioMuteOffSuccess = new( new byte[] { 0x22, 0x13, wild, wild, 0x00, wild }, nameof(AudioMuteOffSuccess) );
+        public static Response VolumeAdjustSuccess = new( new byte[] { 0x23, 0x10, wild, wild, 0x02, wild, wild, wild }, nameof(VolumeAdjustSuccess) );
 
 
-        /* Failure responses */
+        /* -----------------------------------------Failure responses----------------------------------------------- */
+
+        
         public static Response PowerOnFailure = new( new byte[] { 0xa2, 0x00, wild, wild, 0x02, wild, wild, wild }, nameof(PowerOnFailure) );
         public static Response PowerOffFailure = new( new byte[] { 0xa2, 0x01, wild, wild, 0x02, wild, wild, wild }, nameof(PowerOffFailure) );
         public static Response SelectInputFailure = new( new byte[] { 0xa2, 0x03, wild, wild, 0x02, wild, wild, wild }, nameof(SelectInputFailure) );
         public static Response GetStatusFailure = new( new byte[] { 0xa0, 0xbf, wild, wild, 0x02, wild, wild, wild }, nameof(GetStatusFailure) );
+        public static Response GetInfoFailure = new( new byte[] { 0xa3, 0x8a, wild, wild, 0x02, wild, wild, wild }, nameof(GetInfoFailure) );
         public static Response GetLampInfoFailure = new( new byte[] { 0xa3, 0x96, wild, wild, 0x02, wild, wild, wild }, nameof(GetLampInfoFailure) );
         public static Response GetErrorsFailure = new( new byte[] { 0xa0, 0x88, wild, wild, 0x02, wild, wild, wild }, nameof(GetErrorsFailure) );
         public static Response GetModelInfoFailure = new( new byte[] { 0xa0, 0x85, wild, wild, 0x02, wild, wild, wild }, nameof(GetModelInfoFailure) );
@@ -76,6 +93,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         public static Response VideoMuteOffFailure = new( new byte[] { 0xa2, 0x11, wild, wild, 0x02, wild, wild, wild }, nameof(VideoMuteOffFailure) );
         public static Response AudioMuteOnFailure = new( new byte[] { 0xa2, 0x12, wild, wild, 0x02, wild, wild, wild }, nameof(AudioMuteOnFailure) );
         public static Response AudioMuteOffFailure = new( new byte[] { 0xa2, 0x13, wild, wild, 0x02, wild, wild, wild }, nameof(AudioMuteOffFailure) );
+        public static Response VolumeAdjustFailure = new( new byte[] { 0xa3, 0x10, wild, wild, 0x02, wild, wild, wild }, nameof(VolumeAdjustFailure) );
 
         public Response( byte[] data, string? name=null )
         {

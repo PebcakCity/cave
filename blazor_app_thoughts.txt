@@ -1,0 +1,59 @@
+
+
+-------------------------------
+Blazor thoughts:
+
+With the Blazor server app, how can we pass a list (or dictionary) of input
+names to a DeviceController component?  There are several ways to pass data from
+one component to another:
+Route parameters, query strings, component parameters, state containers...
+The best fit is probably to use a mix of component parameters and a singleton
+service that contains the whole configuration.  Config would get loaded and be
+available to the HomePage so it would have a reference to each Device for
+SelectSource to use.
+
+Component parameters:
+
+[Index page]
+
+@for( int i = 0; i < DeviceList.Count; i++ )
+{
+    <DeviceController Device="@DeviceList[i]"/>
+}
+
+@code
+{
+    // get list of devices
+    List<Device> DeviceList = ...
+}
+
+[DeviceController page]
+
+@code
+{
+    [Parameter]
+    public Device Device { get; set; }
+}
+
+-----
+
+Singleton Service
+
+[Program.cs]
+
+builder.Services.AddSingleton<AppConfig>();
+
+[Shared/AppConfig.cs]
+
+public class AppConfig
+{
+    public string RoomName {get; protected set;}
+    public Dictionary<string, Device> Devices {get; protected set;}
+    public Dictionary<string, List<KeyValuePair>>> Sources {get; protected set;}
+    //...
+}
+
+[Component]
+@inject AppConfig appConfig;
+
+...

@@ -1,0 +1,302 @@
+- Implement a configuration file/database reader system for the RPi apps.
+
+Figure out a data structure for storing multiple devices and a set of
+"inputs" or instruction sequences that will cause different inputs to be
+selected on multiple devices. Eg. To use a laptop, select input RGB 1 on the
+projector and input 2 on the switcher.  To use the Apple TV, just select
+input HDMI 1 on the projector.  These buttons are what we would ideally like
+to be able to display on some sort of "Home screen", along with buttons for
+system on / system off.
+...
+
+Info a device needs:
+1. What type of device it is (for finding the class?  for determining what kinds of controls it should have?
+maybe we don't really need this?)
+2. What controller class it uses
+3. What connection information is needed, if any (is it over a LAN, is it RS232?, address/port/baud info)
+4. What controls it has (specifically what inputs are available but maybe others details?
+whether or not to display certain available controls?  icons/images for the buttons?)
+
+
+Thoughts in progress:
+--------------------
+{
+    "RoomName": "Building 1, Room 1",                           // appears on main page as identifier
+    "Devices": {
+        "Projector 1": {                                        // => Device.Name
+            "Type": "Projector",                                // for determining what kind of controls should be standard?
+            "Controller" : "NECProjector",                      // class to instantiate
+            "Connection" : {
+                "Type": "Network",                              // enum type { Network, RS232, ...? } Serialize as enum name instead of int value
+                "Info": {                                       // if type is "Network", new NetworkDeviceConnectionInfo(...)...
+                    "Address": "192.168.1.100",                 // (while we're at it, maybe rework *DeviceConnectionInfo classes to allow null on int members?
+                    "Port": 7142                                // so if null (ie. not present in config), should be able to be inferred by either NECProjector or SocketClient)
+                }
+            },
+            "Controls": {
+                "InputsControls": {
+                    "input1": {
+                        "DisplayName": "Computer",              // button text (also need to figure out how to display both text & image on buttons)
+                        "Value" : "RGB1",                       // value passed to device's SelectInput
+                        "ImageResource" : {
+                            "Type": "EmbeddedResource",         // embedded resource (obviously)
+                            "PathName": "image-computer"        // resource name
+                        }
+                    },
+                    "input2": {
+                        "DisplayName": "Apple TV",
+                        "Value": "HDMI1",
+                        "ImageResource": {
+                            "Type": "ImageFile",                // external image
+                            "PathName": "images/apple.png"      // image path
+                        }
+                    },
+                    "input3": {
+                        "DisplayName": "Network",
+                        "Value": "Network",
+                        "ImageResource": {
+                            "Type": "EmbeddedResource",
+                            "PathName" : "image-ethernet"
+                        }
+                    }
+                },
+                "DefaultInput": "input1",                       // if defined, at SystemOn we select this input?  or do we define & use default on Source instead?
+                "Audio": {
+                    "Volume": null,                             // don't show volume controls at all
+                    "Mute": null                                // don't show audio mute button
+                },
+                "Display": {
+                    "Mute": false                               // show display mute button but disallow selecting it?
+                }                                               // use ie. CSS to change class of button depending on current mute status
+            }
+        },
+        "Switcher": {
+            "Type": "SimpleRelay",
+            "Controller": "Relay2Channel",
+            "Controls": {
+                "InputControls": {
+                    "input1": {
+                        "DisplayName": "Desktop",
+                        "Value": "Input1",
+                        "Image": ...
+                    },
+                    "input2": {
+                        "DisplayName": "Laptop",
+                        "Value": "Input2",
+                        ...
+                    }
+                }
+                "DefaultInput": "input1"
+            }
+        }
+    },
+    "Sources": {
+        "source1": {
+            "DisplayName": "Desktop",
+            "ImageResource": {
+                "Type": "Resource",
+                "PathName" : "image-computer"
+            },
+            "DeviceInputs": [
+                "Projector 1": "input1",
+                "Switcher": "input1"
+            ]
+        },
+        ...
+            "DisplayName": "Laptop",
+        ...
+            "DisplayName": "Apple TV",
+        ...
+
+    }
+}
+
+-----------------------------------------------------------------------------------------------------------------------
+Use JSON DOM instead of straight deserializing due to complexity.  Read whole file into JsonDocument or JsonNode and
+deserialize in subsections...
+https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/use-dom#deserialize-subsections-of-a-json-payload
+-----------------------------------------------------------------------------------------------------------------------
+
+public class AppConfig
+{
+    public string RoomName {get; set;}
+    public Dictionary<string, DeviceDescriptor> Devices {get; set;}
+    public Dictionary<string, SourceDescriptor> Sources {get; set;}
+}
+
+public class DeviceDescriptor
+{
+    public string Controller {get; set;}
+    public DeviceConnection Connection {get; set;}
+    public Controls Controls {get; set;}
+}
+
+public class DeviceConnection
+{
+    public ConnectionType Type {get; set;}
+
+    /* should I rework IDeviceConnectionInfo into an abstract class?  I think I made it an interface originally because
+     * I expected my app config reader would be located in Utils and I didn't like the idea of Utils relying back on
+     * a class located in DeviceControllers, hence, put it in a separate namespace used by both ie. Interfaces. 
+     * But it seems like the app config reader is amounting to an application in and of itself at this point... */
+    public DeviceConnectionInfo Info {get; set;}
+
+    public enum ConnectionType {
+        Network,
+        RS232
+    };
+}
+
+public class Controls
+{
+    public DeviceInputControls Inputs {get; set;}
+    public string DefaultInput {get; set;}
+    public AudioControls AudioControls {get; set;}
+    public DisplayControls DisplayControls {get; set;}
+}
+
+public class DeviceInputControls : Dictionary<string, DeviceInputControl>
+{
+}
+
+public class DeviceInputControl
+{
+    public string DisplayName {get; set;}
+    public string Value {get; set;}
+    public ImageResource ImageResource {get; set;}
+}
+
+public class ImageResource
+{
+    public ResourceType Type {get; set;}
+    public string PathName {get; set;}
+
+    public enum ResourceType {
+        EmbeddedResource,
+        ImageFile
+    }
+}
+
+public class AudioControls
+{
+    public bool? Volume {get; set;}
+    public bool? Mute {get; set;}
+}
+
+public class DisplayControls
+{
+    public bool? Mute {get; set;}
+}
+
+public class SourceDescriptor
+{
+    // also needs (image) info for some kind of button controls ... maybe instead of reinventing new class, should maybe refactor
+    // InputControls up above so we can reuse it here?  device InputControls just need string value to pass to SelectInput
+    // source InputControls need a list of key/value pairs
+
+    //...maybe just better & easier to have two classes and name both appropriately    
+    
+}
+
+... 
+
+
+-------------------------------------------------------------------------------
+
+Sources : { 
+    "PC": [
+        "Projector 1": "RGB1",
+        "AV switcher": "Input1"
+    ],
+    "Laptop": [
+        "Projector 1": "RGB1",
+        "AV switcher": "Input2"
+    ],
+    "Apple TV": [
+        "Projector 1": "HDMI1"
+    ]
+}
+
+Dictionary<string, List<KeyValuePair<string, string>>>
+
+Devices : {
+    "Projector" -> {Projector instance},
+    "AV switcher" -> {Switcher instance}
+}
+
+Dictionary<string, Device>
+
+So we need a data structure to keep all this data in that can be queried at
+time of a click event on a button.  We read all the config data in and make it
+available to all components (singleton service?) or just the HomePage component?
+
+In the HomePage component, we use @foreach to create buttons with text matching
+their source names and their @onclick is set to "@(() => SelectSource({text}))"
+
+SelectSource uses the button text to index into the Sources collection to get
+the list of KeyValuePairs, and then for each KeyValuePair in the List, we
+use the Key to index into the Devices collection to retrieve the actual Device
+instance, then check its interface and call the appropriate method to select
+input.
+
+Device GetDevice(string deviceName)
+{
+    Device device;
+    if ( deviceName != null )
+        device = Devices.GetValueOrDefault(deviceName);
+    return device;
+}
+
+async Task SelectSource(string sourceName)
+{
+    try
+    {
+        var deviceInputList = Sources.GetValueOrDefault(sourceName);
+        foreach ( var deviceInput in deviceInputList )
+        {
+            Device device = GetDevice(deviceInput.Key);
+            if ( device is IDisplayInputSelectable idis )
+                await idis.PowerOnSelectInput(deviceInput.Value);
+            else if ( device is IInputSelectable iis )
+                await iis.SelectInput(deviceInput.Value);
+                
+            if ( device is IDisplayMutable idm )
+                idm.DisplayMute(false);
+        }
+    }
+    catch ( Exception ex )
+    {
+        throw;
+    }
+}
+
+SystemOnButton()
+{
+    for device in devices:
+        switch( device_type )
+            case projector:
+                if has_default_input:
+                    await PowerOnSelectInput(default_input)
+                else
+                    await PowerOn()
+            case tv:
+                if has_default_input:
+                    await PowerOnSelectInput(default_input)
+                else
+                    await PowerOn()
+            case switcher:
+                // do whatever the hell we decide is the default behavior for these
+}
+
+SystemOffButton()
+{
+    for device in devices:
+        switch( device_type )
+            case projector:
+                await PowerOff()
+            case tv:
+                await PowerOff()
+            case switcher:
+                // same ...
+}
+

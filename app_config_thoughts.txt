@@ -446,9 +446,10 @@ device IP address (static/DHCP reservation required), maybe a unique ID of some 
 cat /proc/cpuinfo?  cat /etc/machine-id?  Obviously not going to work if devices are not Raspberry Pis or not running
 Linux...  Would prefer not to be limited to one specific machine type or OS.
 
-Would like something fairly unique out of the box that can be changed if needed, doesn't change when the OS is
+Would like something fairly unique out of the box that can be changed if needed, maybe doesn't change when the OS is
 reinstalled, and would be the same whatever OS the device happens to be running.  That's probably going to be a
-MAC address...
+MAC address...?  Also, could just be the room name stored in a file somewhere & we replace that file as needed when
+spinning up a system.
 
 *Windows (Powershell): (Get-NetAdapter -Name "Ethernet").MacAddress
 **Linux (bash): cat /sys/class/net/$(ip route show default | awk '/default/ {print $5; exit}')/address
@@ -457,33 +458,34 @@ MAC address...
 **  '...; exit}' causes awk to stop printing after the first line if there are multiple interfaces returned
     (eg. both wired and wireless)
 
+using pin entry system instead of MAC
+
 startup
     try
-        get mac address
-        connect & query database for JSON matching address //where is it getting the DB address from? Another file?
+        get user name & DB address from DB file
+        get pin code from user
+        hash user/pin
+        connect/query database for JSON room config
         start application
         write JSON to local file
 
-    catch failure to query database
-        read local file instead
+    on failure to get user & DB
+        log failure reason (file missing) & exit
 
-    catch failure to read local file
+    on failure to query database
+        if authentication failure
+            throw bad pin entry
+        else (server's down?)
+            read local file instead
+
+    on bad pin entry
+        log failure reason (bad pin) & do nothing
+
+    on failure to read local file
         log failure reason & exit
 
-    catch failure to start application
+    on failure to start application
         log failure reason & exit
-
-----------------
-
-get mac address
-    address = null
-    if mac address file exists
-        address = contents of file
-    else
-        address = run local command to get mac address
-        if single address & looks valid
-            save it to address file
-    return address
 
 ----------------
 
@@ -492,12 +494,15 @@ start application
         try 
             create device controller component for device
             add component to UI
-        catch
+        on error
             log & throw
     for each source in app config
         for each device input listed
+            // Don't have to check if device HAS an input called that (would be hard to do without including full name
+            // of class & doing some magic with searching that namespace for an Input class & checking its members.)
+            // Just check if it's listed in the config's devices section.
             if device or input not found in app config
-                log & throw | remove source
+                log & throw | ignore source
 
 
 -------------------------------------------------------------------------------

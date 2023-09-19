@@ -1,54 +1,40 @@
 - Implement a configuration file/database reader system for the RPi apps.
 
-Figure out a data structure for storing multiple devices and a set of
-"inputs" or instruction sequences that will cause different inputs to be
-selected on multiple devices. Eg. To use a laptop, select input RGB 1 on the
-projector and input 2 on the switcher.  To use the Apple TV, just select
-input HDMI 1 on the projector.  These buttons are what we would ideally like
-to be able to display on some sort of "Home screen", along with buttons for
-system on / system off.
-...
 
-Info a device needs:
-1. What type of device it is (for finding the class?  for determining what kinds of controls it should have?
-maybe we don't really need this?)
-2. What controller class it uses
-3. What connection information is needed, if any (is it over a LAN, is it RS232?, address/port/baud info)
-4. What controls it has (specifically what inputs are available but maybe others details?
-whether or not to display certain available controls?  icons/images for the buttons?)
+Current state of testing:
+------------------------
 
+-------------------------------------------------------------------------------
+JSON input file:
+-------------------------------------------------------------------------------
 
-Thoughts in progress:
---------------------
 {
-    "RoomName": "Building 1, Room 1",                           // appears on main page as identifier
+    "RoomName": "Main 1",
     "Devices": {
-        "Projector 1": {                                        // => Device.Name
-            "Type": "Projector",                                // for determining what kind of controls should be standard?
-            "Controller" : "NECProjector",                      // class to instantiate
-            "Connection" : {
-                "Type": "Network",                              // enum type { Network, RS232, ...? } Serialize as enum name instead of int value
-                "Info": {                                       // if type is "Network", new NetworkDeviceConnectionInfo(...)...
-                    "Address": "192.168.1.100",                 // (while we're at it, maybe rework *DeviceConnectionInfo classes to allow null on int members?
-                    "Port": 7142                                // so if null (ie. not present in config), should be able to be inferred by either NECProjector or SocketClient)
-                }
+        "Projector 1": {
+            "Class": "NECProjector",
+            "ConnectionInfo": {
+                "$type": "network",
+                "Address": "192.168.1.100",
+                "Port": 7142
             },
             "Controls": {
-                "InputsControls": {
+                "ControlTypes": 45,
+                "InputControls": {
                     "input1": {
-                        "DisplayName": "Computer",              // button text (also need to figure out how to display both text & image on buttons)
-                        "Value" : "RGB1",                       // value passed to device's SelectInput
+                        "DisplayName": "Computer",
+                        "Value" : "RGB1",
                         "ImageResource" : {
-                            "Type": "EmbeddedResource",         // embedded resource (obviously)
-                            "PathName": "image-computer"        // resource name
+                            "Type": "EmbeddedResource",
+                            "Path": "image-computer"
                         }
                     },
                     "input2": {
                         "DisplayName": "Apple TV",
                         "Value": "HDMI1",
                         "ImageResource": {
-                            "Type": "ImageFile",                // external image
-                            "PathName": "images/apple.png"      // image path
+                            "Type": "ImageFile",
+                            "Path": "images/apple.png"
                         }
                     },
                     "input3": {
@@ -56,188 +42,471 @@ Thoughts in progress:
                         "Value": "Network",
                         "ImageResource": {
                             "Type": "EmbeddedResource",
-                            "PathName" : "image-ethernet"
+                            "Path" : "image-ethernet"
                         }
                     }
-                },
-                "DefaultInput": "input1",                       // if defined, at SystemOn we select this input?  or do we define & use default on Source instead?
-                "Audio": {
-                    "Volume": null,                             // don't show volume controls at all
-                    "Mute": null                                // don't show audio mute button
-                },
-                "Display": {
-                    "Mute": false                               // show display mute button but disallow selecting it?
-                }                                               // use ie. CSS to change class of button depending on current mute status
+                }
             }
         },
         "Switcher": {
-            "Type": "SimpleRelay",
-            "Controller": "Relay2Channel",
+            "Class": "Relay2Channel",
             "Controls": {
+                "ControlTypes": "InputSelectButtons",
                 "InputControls": {
                     "input1": {
                         "DisplayName": "Desktop",
                         "Value": "Input1",
-                        "Image": ...
+                        "ImageResource": {
+                            "Type": "EmbeddedResource",
+                            "Path": "image-computer"
+                        }
                     },
                     "input2": {
                         "DisplayName": "Laptop",
                         "Value": "Input2",
-                        ...
+                        "ImageResource": {
+                            "Type": "EmbeddedResource",
+                            "Path": "image-laptop"
+                        }
                     }
                 }
-                "DefaultInput": "input1"
             }
         }
     },
     "Sources": {
-        "source1": {
+        "default": {
             "DisplayName": "Desktop",
             "ImageResource": {
-                "Type": "Resource",
-                "PathName" : "image-computer"
+                "Type": "EmbeddedResource",
+                "Path" : "image-computer"
             },
-            "DeviceInputs": [
+            "DeviceInputs": {
                 "Projector 1": "input1",
                 "Switcher": "input1"
-            ]
+            }
         },
-        ...
+        "source2": {
             "DisplayName": "Laptop",
-        ...
+            "ImageResource": {
+                "Type": "EmbeddedResource",
+                "Path": "image-laptop"
+            },
+            "DeviceInputs": {
+                "Projector 1": "input1",
+                "Switcher": "input2"
+            }
+        },
+        "source3": {
             "DisplayName": "Apple TV",
-        ...
-
+            "ImageResource": {
+                "Type": "ImageFile",
+                "Path": "images/apple.png"
+            },
+            "DeviceInputs": {
+                "Projector 1": "input2"
+            }
+        }
     }
 }
 
------------------------------------------------------------------------------------------------------------------------
-Use JSON DOM instead of straight deserializing due to complexity.  Read whole file into JsonDocument or JsonNode and
-deserialize in subsections...
-https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/use-dom#deserialize-subsections-of-a-json-payload
------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Test code:
+-------------------------------------------------------------------------------
 
 public class AppConfig
 {
-    public string RoomName {get; set;}
-    public Dictionary<string, DeviceDescriptor> Devices {get; set;}
-    public Dictionary<string, SourceDescriptor> Sources {get; set;}
+    public string? RoomName {get; set;}
+    public Dictionary<string, DeviceDescription> Devices {get; set;}
+    public Dictionary<string, Source> Sources {get; set;}
+
+    public AppConfig()
+    {
+        Devices = new();
+        Sources = new();
+    }
 }
 
-public class DeviceDescriptor
+public class DeviceDescription
 {
-    public string Controller {get; set;}
-    public DeviceConnection Connection {get; set;}
+    public string? Class {get; set;}
+    public DeviceConnectionInfo? ConnectionInfo {get; set;}
     public Controls Controls {get; set;}
+
+    public DeviceDescription()
+    {
+        Controls = new();
+    }
 }
 
-public class DeviceConnection
+[JsonDerivedType(typeof(DeviceConnectionInfo), typeDiscriminator: "base")]
+[JsonDerivedType(typeof(NetworkDeviceConnectionInfo), typeDiscriminator: "network")]
+[JsonDerivedType(typeof(SerialDeviceConnectionInfo), typeDiscriminator: "serial")]
+public class DeviceConnectionInfo {}
+
+public class NetworkDeviceConnectionInfo : DeviceConnectionInfo
 {
-    public ConnectionType Type {get; set;}
+    public string? Address {get; set;}
+    public int Port {get; set;}
+}
 
-    /* should I rework IDeviceConnectionInfo into an abstract class?  I think I made it an interface originally because
-     * I expected my app config reader would be located in Utils and I didn't like the idea of Utils relying back on
-     * a class located in DeviceControllers, hence, put it in a separate namespace used by both ie. Interfaces. 
-     * But it seems like the app config reader is amounting to an application in and of itself at this point... */
-    public DeviceConnectionInfo Info {get; set;}
+public class SerialDeviceConnectionInfo : DeviceConnectionInfo
+{
+    public string? SerialDevice {get; set;}
+    public int Baudrate {get; set;}
+}
 
-    public enum ConnectionType {
-        Network,
-        RS232
-    };
+[System.Flags]
+public enum ControlTypes
+{
+    None = 0,
+    InputSelectButtons = 1,
+    PowerOnOffButtons = 2,
+    DisplayMuteToggle = 4,
+    AudioMuteToggle = 8,
+    AudioVolumeButtons = 16,
+    AudioVolumeSlider = 32
 }
 
 public class Controls
 {
-    public DeviceInputControls Inputs {get; set;}
-    public string DefaultInput {get; set;}
-    public AudioControls AudioControls {get; set;}
-    public DisplayControls DisplayControls {get; set;}
+    public ControlTypes ControlTypes {get; set;}
+    public Dictionary<string, InputControl> InputControls {get; set;}
+
+    public Controls() { InputControls = new(); }
 }
 
-public class DeviceInputControls : Dictionary<string, DeviceInputControl>
+public class InputControl
 {
-}
+    public string? DisplayName {get; set;}
+    public string? Value {get; set;}
+    public ImageResource? ImageResource {get; set;}
 
-public class DeviceInputControl
-{
-    public string DisplayName {get; set;}
-    public string Value {get; set;}
-    public ImageResource ImageResource {get; set;}
-}
-
-public class ImageResource
-{
-    public ResourceType Type {get; set;}
-    public string PathName {get; set;}
-
-    public enum ResourceType {
-        EmbeddedResource,
-        ImageFile
+    public override string ToString()
+    {
+        return $"{DisplayName}: {Value} ({ImageResource})";
     }
 }
 
-public class AudioControls
+public class ImageResource 
 {
-    public bool? Volume {get; set;}
-    public bool? Mute {get; set;}
+    public enum ResourceType 
+    {
+        EmbeddedResource,
+        ImageFile
+    }
+
+    public ResourceType Type {get; set;}
+    public string? Path {get; set;}
+
+    public override string ToString()
+    {
+        return $"Type:{Type}, Path:{Path}";
+    }
 }
 
-public class DisplayControls
+public class Source 
 {
-    public bool? Mute {get; set;}
+    public string? DisplayName {get; set;}
+    public ImageResource? ImageResource {get; set;}
+    public Dictionary<string, string> DeviceInputs {get; set;}
+
+    public Source() { DeviceInputs = new(); }
+
+    public override string ToString()
+    {
+        string retVal = $"{DisplayName}, ({ImageResource})\n";
+        retVal += "DeviceInputs:\n";
+        foreach( var device in DeviceInputs!.Keys )
+        {
+            var input = DeviceInputs[device];
+            retVal += $"\t{device}: {input}\n";
+        }
+        retVal += "\n";
+        return retVal;
+    }
 }
 
-public class SourceDescriptor
-{
-    // also needs (image) info for some kind of button controls ... maybe instead of reinventing new class, should maybe refactor
-    // InputControls up above so we can reuse it here?  device InputControls just need string value to pass to SelectInput
-    // source InputControls need a list of key/value pairs
 
-    //...maybe just better & easier to have two classes and name both appropriately    
-    
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        using FileStream jsonFile = new ("data.json", FileMode.Open);
+        JsonNode rootNode = JsonNode.Parse(jsonFile)!;
+
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            Converters =
+            {
+                new JsonStringEnumConverter()
+            }
+        };
+
+        /* Deserialize entire AppConfig object */
+        var appConfig = JsonSerializer.Deserialize<AppConfig>(rootNode, options);
+
+        if (appConfig != null)
+        {
+            Console.WriteLine("Deserialization successful.");
+            Console.WriteLine($"Room name: {appConfig.RoomName}");
+            Console.WriteLine($"Projector controller class: {appConfig.Devices.GetValueOrDefault("Projector 1")?.Class}");
+
+            // test with bad device key
+            Console.WriteLine($"Non-existent device controller class: {appConfig.Devices.GetValueOrDefault("Non-existent device")?.Class}");
+
+            var pjControlTypes = appConfig.Devices["Projector 1"].Controls.ControlTypes;
+            Console.WriteLine($"\nProjector 1 control types: {pjControlTypes}\n");
+
+            var pjInputControls = appConfig.Devices["Projector 1"].Controls.InputControls;
+            Console.WriteLine($"Input buttons defined:");
+            foreach( var key in pjInputControls.Keys )
+                Console.WriteLine($"input name: {key}, details: {pjInputControls[key]}");
+            
+            Console.WriteLine($"Input 1 display name: {appConfig.Devices["Projector 1"].Controls.InputControls.GetValueOrDefault("input1")?.DisplayName}");
+
+            var pjConnectionInfo = appConfig.Devices["Projector 1"].ConnectionInfo;
+            if (pjConnectionInfo is NetworkDeviceConnectionInfo ndci)
+                Console.WriteLine($"Projector network info: {ndci.Address}:{ndci.Port}");
+            else if (pjConnectionInfo is SerialDeviceConnectionInfo sdci)
+                Console.WriteLine($"Projector serial info: {sdci.SerialDevice}:{sdci.Baudrate}");
+
+            // is null because it's not present
+            var switcherConnectionInfo = appConfig.Devices["Switcher"].ConnectionInfo;
+            Console.WriteLine($"switcherConnectionInfo == null ? : {switcherConnectionInfo == null}");
+        }
+
+        /* How do we avoid all the ? and ! everywhere?  Default constructors that set these objects to non-null for us? */
+
+        Console.WriteLine("\n--------------------------------------------------------------------------------------\n");
+
+        /* Deserializing only sections of the JSON at a time */
+
+        JsonNode inputControlsNode = rootNode["Devices"]!["Projector 1"]!["Controls"]!["InputControls"]!;
+
+        // Passing the options with JsonStringEnumConverter makes it deserialize properly with the enum type in ImageResource
+        var inputControls = JsonSerializer.Deserialize<Dictionary<string, InputControl>>(inputControlsNode, options)!;
+        foreach (var input in inputControls.Keys)
+        {
+            Console.WriteLine($"input name: {input}, value: {inputControls[input]}");
+        }
+        
+        Console.WriteLine("\n--------------------------------------------------------------------------------------\n");
+
+        JsonNode sourcesNode = rootNode["Sources"]!;
+        var sources = JsonSerializer.Deserialize<Dictionary<string, Source>>(sourcesNode, options)!;
+        foreach (var source in sources.Keys)
+        {
+            Console.WriteLine($"source name: {source}, value: ");
+            Console.WriteLine(sources[source]);
+        }
+
+        /* Write the deserialized AppConfig back out to another file */
+        using FileStream output = new("serialized.json", FileMode.Create);
+        JsonSerializer.Serialize(output, appConfig, typeof(AppConfig), options);
+    }
 }
 
-... 
+
+
+-------------------------------------------------------------------------------
+Result:
+-------------------------------------------------------------------------------
+
+serialized.json:
+
+{
+  "RoomName": "Main 1",
+  "Devices": {
+    "Projector 1": {
+      "Class": "NECProjector",
+      "ConnectionInfo": {
+        "$type": "network",
+        "Address": "192.168.1.100",
+        "Port": 7142
+      },
+      "Controls": {
+        "ControlTypes": "InputSelectButtons, DisplayMuteToggle, AudioMuteToggle, AudioVolumeSlider",
+        "InputControls": {
+          "input1": {
+            "DisplayName": "Computer",
+            "Value": "RGB1",
+            "ImageResource": {
+              "Type": "EmbeddedResource",
+              "Path": "image-computer"
+            }
+          },
+          "input2": {
+            "DisplayName": "Apple TV",
+            "Value": "HDMI1",
+            "ImageResource": {
+              "Type": "ImageFile",
+              "Path": "images/apple.png"
+            }
+          },
+          "input3": {
+            "DisplayName": "Network",
+            "Value": "Network",
+            "ImageResource": {
+              "Type": "EmbeddedResource",
+              "Path": "image-ethernet"
+            }
+          }
+        }
+      }
+    },
+    "Switcher": {
+      "Class": "Relay2Channel",
+      "ConnectionInfo": null,
+      "Controls": {
+        "ControlTypes": "InputSelectButtons",
+        "InputControls": {
+          "input1": {
+            "DisplayName": "Desktop",
+            "Value": "Input1",
+            "ImageResource": {
+              "Type": "EmbeddedResource",
+              "Path": "image-computer"
+            }
+          },
+          "input2": {
+            "DisplayName": "Laptop",
+            "Value": "Input2",
+            "ImageResource": {
+              "Type": "EmbeddedResource",
+              "Path": "image-laptop"
+            }
+          }
+        }
+      }
+    }
+  },
+  "Sources": {
+    "default": {
+      "DisplayName": "Desktop",
+      "ImageResource": {
+        "Type": "EmbeddedResource",
+        "Path": "image-computer"
+      },
+      "DeviceInputs": {
+        "Projector 1": "input1",
+        "Switcher": "input1"
+      }
+    },
+    "source2": {
+      "DisplayName": "Laptop",
+      "ImageResource": {
+        "Type": "EmbeddedResource",
+        "Path": "image-laptop"
+      },
+      "DeviceInputs": {
+        "Projector 1": "input1",
+        "Switcher": "input2"
+      }
+    },
+    "source3": {
+      "DisplayName": "Apple TV",
+      "ImageResource": {
+        "Type": "ImageFile",
+        "Path": "images/apple.png"
+      },
+      "DeviceInputs": {
+        "Projector 1": "input2"
+      }
+    }
+  }
+}
+
+-------------------------------------------------------------------------------
+
+Serializes & deserializes as expected.
+
+    - GetValueOrDefault for non-existent keys works as intended
+    - "$type": "network" results in NetworkDeviceConnectionInfo being created
+        with Address & Port properties
+    - "ControlTypes": 45, serializes & deserializes as "InputSelectButtons, 
+        DisplayMuteToggle, AudioMuteToggle, AudioVolumeSlider"
+    - "Switcher": "ConnectionInfo" serializes as null because it's not present
+        in the original data
+
+Would be ideal to verify "Sources" separately and after "Devices" to ensure
+that for each listed source, the devices and inputs listed exist.  Otherwise,
+we need to either not display that source button or back out with some sort of
+exception.
+
+Basic concept for app startup:
+
+1. Try to load/parse JSON string from database.  If that failed, try loading the file from disk.
+2. Try to instantiate all device controller components (using Task.WhenAll maybe?)
+3. If successful, write the config back to a file on disk
+
+For loading from database, we need a room reference.  We can get that either from the .json config itself (can we do
+that without having to parse the whole file twice?), from a separate file we place on disk, from MAC address, from
+device IP address (static/DHCP reservation required), maybe a unique ID of some sort?  Serial number of the processor?
+cat /proc/cpuinfo?  cat /etc/machine-id?  Obviously not going to work if devices are not Raspberry Pis or not running
+Linux...  Would prefer not to be limited to one specific machine type or OS.
+
+Would like something fairly unique out of the box that can be changed if needed, doesn't change when the OS is
+reinstalled, and would be the same whatever OS the device happens to be running.  That's probably going to be a
+MAC address...
+
+*Windows (Powershell): (Get-NetAdapter -Name "Ethernet").MacAddress
+**Linux (bash): cat /sys/class/net/$(ip route show default | awk '/default/ {print $5; exit}')/address
+
+*   It's "Ethernet" on my desktop here, but it likely varies from machine to machine.
+**  '...; exit}' causes awk to stop printing after the first line if there are multiple interfaces returned
+    (eg. both wired and wireless)
+
+startup
+    try
+        get mac address
+        connect & query database for JSON matching address //where is it getting the DB address from? Another file?
+        start application
+        write JSON to local file
+
+    catch failure to query database
+        read local file instead
+
+    catch failure to read local file
+        log failure reason & exit
+
+    catch failure to start application
+        log failure reason & exit
+
+----------------
+
+get mac address
+    address = null
+    if mac address file exists
+        address = contents of file
+    else
+        address = run local command to get mac address
+        if single address & looks valid
+            save it to address file
+    return address
+
+----------------
+
+start application
+    for each device in app config
+        try 
+            create device controller component for device
+            add component to UI
+        catch
+            log & throw
+    for each source in app config
+        for each device input listed
+            if device or input not found in app config
+                log & throw | remove source
 
 
 -------------------------------------------------------------------------------
 
-Sources : { 
-    "PC": [
-        "Projector 1": "RGB1",
-        "AV switcher": "Input1"
-    ],
-    "Laptop": [
-        "Projector 1": "RGB1",
-        "AV switcher": "Input2"
-    ],
-    "Apple TV": [
-        "Projector 1": "HDMI1"
-    ]
-}
 
-Dictionary<string, List<KeyValuePair<string, string>>>
 
-Devices : {
-    "Projector" -> {Projector instance},
-    "AV switcher" -> {Switcher instance}
-}
 
-Dictionary<string, Device>
 
-So we need a data structure to keep all this data in that can be queried at
-time of a click event on a button.  We read all the config data in and make it
-available to all components (singleton service?) or just the HomePage component?
 
-In the HomePage component, we use @foreach to create buttons with text matching
-their source names and their @onclick is set to "@(() => SelectSource({text}))"
-
-SelectSource uses the button text to index into the Sources collection to get
-the list of KeyValuePairs, and then for each KeyValuePair in the List, we
-use the Key to index into the Devices collection to retrieve the actual Device
-instance, then check its interface and call the appropriate method to select
-input.
 
 Device GetDevice(string deviceName)
 {

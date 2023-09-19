@@ -1,11 +1,9 @@
-﻿using Cave.Interfaces;
-
-namespace Cave.DeviceControllers
+﻿namespace Cave.DeviceControllers
 {
-    public class NetworkDeviceConnectionInfo : IDeviceConnectionInfo
+    public class NetworkDeviceConnectionInfo : DeviceConnectionInfo
     {
-        public string IPAddress { get; init; }
-        public int Port { get; init; }
+        public string IPAddress { get; set; }
+        public int Port { get; set; }
 
         public NetworkDeviceConnectionInfo(string address, int port)
         {
@@ -13,11 +11,7 @@ namespace Cave.DeviceControllers
             Port = port;
         }
 
-        public string GetConnectionInfo()
-        {
-            return $"{IPAddress}:{Port}";
-        }
-        public override string ToString() { return GetConnectionInfo(); }
+        public override string ToString() { return $"{IPAddress}:{Port}"; }
         public static implicit operator string(NetworkDeviceConnectionInfo info) {  return info.ToString(); }
     }
 }

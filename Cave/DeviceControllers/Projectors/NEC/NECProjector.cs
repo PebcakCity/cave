@@ -15,14 +15,14 @@ namespace Cave.DeviceControllers.Projectors.NEC
     public partial class NECProjector : Projector, IDebuggable
     {
         private INECClient? Client = null;
-        private readonly IDeviceConnectionInfo ConnectionInfo;
+        private readonly DeviceConnectionInfo ConnectionInfo;
         private static readonly Logger Logger = LogManager.GetLogger("NECProjector");
         private DeviceInfo Info;
         private List<IObserver<DeviceInfo>> Observers;
 
         /// <summary>
         /// Creates a new <see cref="NECProjector"/> object with the specified
-        /// name, <see cref="IDeviceConnectionInfo">connection information
+        /// name, <see cref="DeviceConnectionInfo">connection information
         /// </see>, and an optional list of strings representing the selectable
         /// <see cref="Input"/> terminals available on this device.
         /// After creation, an application must call <see cref="Initialize"/>
@@ -37,7 +37,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// <param name="inputs">List of strings corresponding to input names
         /// available.  If null, sensible defaults available on most newer
         /// models are chosen.</param>
-        public NECProjector(string deviceName, IDeviceConnectionInfo connectionInfo, List<string>? inputs = null)
+        public NECProjector(string deviceName, DeviceConnectionInfo connectionInfo, List<string>? inputs = null)
             :base(deviceName)
         {
             this.Name = deviceName;
@@ -50,7 +50,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
 
         /// <summary>
         /// Tries to create a <see cref="INECClient"/> instance and use it to
-        /// connect to the device with the <see cref="IDeviceConnectionInfo"/>
+        /// connect to the device with the <see cref="DeviceConnectionInfo"/>
         /// instance given in the constructor.  If it succeeds, it attempts to
         /// retrieve the model number, serial number, and lamp life information
         /// and then calls <see cref="NotifyObservers"/> to pass that gathered

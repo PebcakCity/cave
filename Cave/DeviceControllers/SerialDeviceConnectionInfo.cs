@@ -1,11 +1,9 @@
-﻿using Cave.Interfaces;
-
-namespace Cave.DeviceControllers
+﻿namespace Cave.DeviceControllers
 {
-    public class SerialDeviceConnectionInfo : IDeviceConnectionInfo
+    public class SerialDeviceConnectionInfo : DeviceConnectionInfo
     {
-        public string SerialPort { get; init; }
-        public int Baudrate { get; init; }
+        public string SerialPort { get; set; }
+        public int Baudrate { get; set; }
 
         public SerialDeviceConnectionInfo( string port, int baudrate )
         {
@@ -13,11 +11,7 @@ namespace Cave.DeviceControllers
             Baudrate = baudrate;
         }
 
-        public string GetConnectionInfo()
-        {
-            return $"Serial device: {SerialPort} - Baudrate: {Baudrate}";
-        }
-        public override string ToString() { return GetConnectionInfo(); }
+        public override string ToString() { return $"Serial port: {SerialPort} - Baudrate: {Baudrate}"; }
         public static implicit operator string( SerialDeviceConnectionInfo info ) { return info.ToString(); }
     }
 }

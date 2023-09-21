@@ -32,14 +32,9 @@ namespace Cave.DeviceControllers.Televisions
         public virtual Task ArrowRight() { throw new NotImplementedException(); }
         public virtual Task GoBack() { throw new NotImplementedException(); }
         public virtual Task Home() { throw new NotImplementedException(); }
-        protected Television(string deviceName, string address, int port) : base(deviceName)
-        {
-            this.Address = address;
-            this.Port = port;
-        }
 
-        public string Address { get; protected set; }
-        public int Port { get; protected set; }
+        protected Television(string deviceName) : base(deviceName) { }
+
         public List<string>? InputsAvailable { get; protected set; }
     }
 }

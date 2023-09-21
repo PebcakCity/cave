@@ -20,15 +20,17 @@ namespace Cave.DeviceControllers.Projectors.NEC
     public class SerialClient : INECClient
     {
         private static readonly Logger Logger = LogManager.GetLogger("NEC.SerialClient");
-        private readonly SerialDeviceConnectionInfo ConnectionInfo;
+
+        private readonly string PortName;
+        private readonly int Baudrate;
 
         private readonly SerialPort Port;
-        private SerialClient(SerialDeviceConnectionInfo serialInfo)
+        private SerialClient(string port, int baudrate)
         {
             try
             {
-                ConnectionInfo = serialInfo;
-                Port = new(ConnectionInfo.SerialPort, ConnectionInfo.Baudrate);
+                (PortName, Baudrate) = (port, baudrate);
+                Port = new(PortName, Baudrate);
                 Port.ReadTimeout = Port.WriteTimeout = 100;
             }
             catch (IOException ex)
@@ -38,14 +40,13 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
         }
 
-        public static async Task<SerialClient> Create(SerialDeviceConnectionInfo serialInfo)
+        public static async Task<SerialClient> Create(string port, int baudrate)
         {
             try
             {
                 Logger.Info("Creating new NEC.SerialClient instance.");
-                SerialClient instance = new(serialInfo);
-                Logger.Info($"Attempting to open port '{serialInfo.SerialPort}' with " +
-                    $"default settings at {serialInfo.Baudrate} baud.");
+                SerialClient instance = new(port, baudrate);
+                Logger.Info($"Attempting to open port '{port}' with default settings at {baudrate} baud.");
                 await instance.TestConnection();
                 return instance;
             }

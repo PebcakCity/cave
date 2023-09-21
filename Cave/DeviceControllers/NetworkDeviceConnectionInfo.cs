@@ -3,7 +3,7 @@
     public class NetworkDeviceConnectionInfo : DeviceConnectionInfo
     {
         public string IPAddress { get; set; }
-        public int Port { get; set; }
+        public int? Port { get; set; }
 
         public NetworkDeviceConnectionInfo(string address, int port)
         {

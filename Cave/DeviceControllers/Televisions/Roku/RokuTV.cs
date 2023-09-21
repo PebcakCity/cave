@@ -30,26 +30,23 @@ namespace Cave.DeviceControllers.Televisions.Roku
         /// selectable <see cref="Input"/>s available on this device.
         /// </summary>
         /// <param name="deviceName">A name for the device.</param>
-        /// <param name="address">IP address of the device.</param>
-        /// <param name="port">Port to connect to.  If unspecified defaults
-        /// to 8060, the Roku external control protocol (ECP) port.</param>
+        /// <param name="connectionInfo">Connection information for the device.</param>
         /// <param name="inputs">List of strings corresponding to input names
         /// available.  If null, sensible defaults available on most newer
         /// models are chosen.</param>
-        public RokuTV(string deviceName, string address, int port=8060, List<string>? inputs = null)
-            : base(deviceName, address, port)
+        public RokuTV(string deviceName, NetworkDeviceConnectionInfo connectionInfo, List<string>? inputs = null)
+            : base(deviceName)
         {
-            this.Name = deviceName;
-            this.Address = address;
-            this.Port = port;
+            base.Name = deviceName;
+            base.ConnectionInfo = connectionInfo;
+            base.InputsAvailable = inputs ?? new List<string> { nameof(Input.InputTuner), nameof(Input.InputHDMI1) };
             this.Observers = new List<IObserver<DeviceInfo>>();
-            this.InputsAvailable = inputs ?? new List<string> { nameof(Input.InputTuner), nameof(Input.InputHDMI1) };
         }
 
         #region Device methods
 
         /// <summary>
-        /// Tries to connect to a Roku TV at the address and port specified in
+        /// Tries to connect to a Roku TV with the connection info specified in
         /// the constructor.  If successful, it calls <see cref="GetDeviceInfo"/> to
         /// get some basic information from the device.
         /// </summary>
@@ -57,8 +54,11 @@ namespace Cave.DeviceControllers.Televisions.Roku
         {
             try
             {
-                Client = new HttpClient();
-                Client.BaseAddress = new Uri($"http://{this.Address}:{this.Port}");
+                if ( ConnectionInfo is NetworkDeviceConnectionInfo ndci )
+                {
+                    Client = new HttpClient();
+                    Client.BaseAddress = new Uri($"http://{ndci.IPAddress}:{ndci.Port ?? 8060}");
+                }
                 await GetDeviceInfo();
                 Logger.Info("RokuTV Initialized");
             }
@@ -227,8 +227,8 @@ namespace Cave.DeviceControllers.Televisions.Roku
             return state switch
             {
                 "none" => MediaState.None,
-                "play" or "playing" => MediaState.Playing,    // seems to be:
-                "pause" or "paused" => MediaState.Paused,     // "play"/"pause"
+                "play" => MediaState.Playing,
+                "pause" => MediaState.Paused,
                 "buffering" => MediaState.Buffering,
                 "stopped" => MediaState.Stopped,
                 "finished" => MediaState.Finished,
@@ -599,6 +599,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             try
             {
                 await KeyPress("VolumeUp");
+                Info.IsAudioMuted = false;
                 NotifyObservers("Volume +1", MessageType.Info);
             }
             catch ( Exception ex )
@@ -617,6 +618,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             try
             {
                 await KeyPress("VolumeDown");
+                Info.IsAudioMuted = false;
                 NotifyObservers("Volume -1", MessageType.Info);
             }
             catch ( Exception ex )

@@ -15,7 +15,6 @@ namespace Cave.DeviceControllers.Projectors.NEC
     public partial class NECProjector : Projector, IDebuggable
     {
         private INECClient? Client = null;
-        private readonly DeviceConnectionInfo ConnectionInfo;
         private static readonly Logger Logger = LogManager.GetLogger("NECProjector");
         private DeviceInfo Info;
         private List<IObserver<DeviceInfo>> Observers;
@@ -40,10 +39,10 @@ namespace Cave.DeviceControllers.Projectors.NEC
         public NECProjector(string deviceName, DeviceConnectionInfo connectionInfo, List<string>? inputs = null)
             :base(deviceName)
         {
-            this.Name = deviceName;
-            this.ConnectionInfo = connectionInfo;
+            base.Name = deviceName;
+            base.ConnectionInfo = connectionInfo;
+            base.InputsAvailable = inputs ?? new List<string> { nameof(Input.RGB1), nameof(Input.HDMI1) };
             this.Observers = new List<IObserver<DeviceInfo>>();
-            this.InputsAvailable = inputs ?? new List<string> { nameof(Input.RGB1), nameof(Input.HDMI1) };
         }
 
         #region Device methods
@@ -62,10 +61,10 @@ namespace Cave.DeviceControllers.Projectors.NEC
             try
             {
                 if ( ConnectionInfo is NetworkDeviceConnectionInfo networkInfo )
-                    this.Client = await SocketClient.Create(networkInfo);
+                    this.Client = await SocketClient.Create(networkInfo.IPAddress, networkInfo.Port ?? 7142);
                 else if ( ConnectionInfo is SerialDeviceConnectionInfo serialInfo )
                     //throw new NotImplementedException("Clients only currently available for network devices.");
-                    this.Client = await SerialClient.Create(serialInfo);
+                    this.Client = await SerialClient.Create(serialInfo.SerialPort, serialInfo.Baudrate ?? 38400);
 
                 await GetModelNumber();
                 await GetSerialNumber();

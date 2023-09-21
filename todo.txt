@@ -1,41 +1,11 @@
-Things that won't take long:
+Things to do/test/play with/figure out when I have time:
 
-Device/Television/RokuTV updates:
+  - AppConfig injection
 
-  - Update Television / RokuTV classes to use DeviceConnectionInfo instead of raw address/port (for easy serialization/
-  deserialization from config).
+  - MySQL/MariaDB connector (simple version without EF/Identify, since all we're doing is a single query on startup).
+    Local hashing, parameterized connection string.  User with only select privileges.
 
-  - May also move DeviceConnectionInfo from NECProjector to parent (Projector)?  Removed
-  raw address/port but opted at the time to stick DCI directly in NECP.  Probably makes more sense to be in the parent.
+  - Modals.  Try to create a simple PIN entry component.
 
-  - Update RokuTV VolumeUp/VolumeDown to set Info.IsAudioMuted false after a successful operation (could help as a
-  baseline for determining/syncing mute state since there's no way to actually query this from the TV?)  If the button
-  state/class (eg. btn-primary/btn-secondary) is out of sync because the device was muted at app startup, this should
-  reset it.  IsDisplayMuted = false -> NotifyObservers("Volume -1") -> App.OnNext() reads/saves state/shows message -> 
-  button class should either stay the same or flip to match correct mute state (off/secondary/whatever) depending on
-  state prior to method call.
-
-Others:
-
-  - Test some ideas in Blazor regarding sharing config data between components.
-
-  - AppConfig - decide whether this will be its own project/middleware or part of an app class itself.  Leaning toward
-  separate project?  Seems like that way apps can include the project reference and then they could use the same config
-  files if desired.  Blazor app & Gtk app have same intended features and target platform, might as well not duplicate
-  code between apps.  If it turns out we need to have some minor config differences between apps, we can always
-  subclass AppConfig or its member classes and deserialize to those?  Would there be any problems injecting AppConfig
-  from its assembly into components in a different assembly?
-
-  - There's obviously other app config data needed besides devices/sources.  Such as address/port/credentials to use
-  for a database connection.  Need to figure out these details.
+  - Store DB connection details in appSettings.json or elsewhere?
    
-Future:
-  
-  - Regarding said database credentials, we can obviously use a user with lowered privileges for table queries so maybe
-  it doesn't have to be super secret?  (And all this app does is allow one to turn classroom devices on/off.  Doesn't
-  really require high security...)  But I'm thinking that for a _future_ app, a pin code entry system at startup
-  would at least provide a means of access with a hashed user & pin code before querying.  Each system/room could have
-  its own user account and possibly unique pin code to hash (or at least a single pin code for each department...).
-  User account could essentially be the room name/code, or whatever we want ex. MAIN101 for Main building room 101 and
-  be stored in the same file with the DB server address.  A set of shell scripts on my office machines would be used
-  for maintaining each RPi controller (assigning users & pin codes, updating configs, etc).

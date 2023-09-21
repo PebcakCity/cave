@@ -7,20 +7,25 @@ namespace Cave.DeviceControllers.Projectors.NEC
     public class SocketClient : INECClient
     {
         private static readonly Logger Logger = LogManager.GetLogger("NEC.SocketClient");
-        private readonly NetworkDeviceConnectionInfo ConnectionInfo;
+        private readonly string IPAddress;
+        private readonly int Port;
 
-        private SocketClient(NetworkDeviceConnectionInfo connectionInfo)
+        private SocketClient(string address, int port)
         {
-            this.ConnectionInfo = connectionInfo;
+            (IPAddress, Port) = (address, port);
         }
 
-        public static async Task<SocketClient> Create(NetworkDeviceConnectionInfo networkInfo)
+        // todo: refactor SocketClient to take an IP address & port again (non-nullable) as part of the larger refactor to
+        // make NDCI.Port nullable.  This way if port numbers are not provided in configuration, the controllers and/or
+        // controller helpers like *Client can still provide their own default.
+
+        public static async Task<SocketClient> Create(string address, int port)
         {
             try
             {
                 Logger.Info("Creating new NEC.SocketClient instance.");
-                SocketClient instance = new(networkInfo);
-                Logger.Info($"Attempting connection to: {networkInfo.IPAddress}:{networkInfo.Port}");
+                SocketClient instance = new(address, port);
+                Logger.Info($"Attempting connection to: {address}:{port}");
                 await instance.TestConnection();
                 return instance;
             }
@@ -37,7 +42,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 using Socket socket = new (AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 using CancellationTokenSource cts = new();
                 cts.CancelAfter(3000);
-                await socket.ConnectAsync(ConnectionInfo.IPAddress, ConnectionInfo.Port, cts.Token);
+                await socket.ConnectAsync(IPAddress, Port, cts.Token);
                 Logger.Info($"Connection success.");
                 socket.Shutdown(SocketShutdown.Both);
             }
@@ -65,7 +70,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 using CancellationTokenSource cts = new();
 
                 cts.CancelAfter(2000);
-                await socket.ConnectAsync(ConnectionInfo.IPAddress, ConnectionInfo.Port, cts.Token);
+                await socket.ConnectAsync(IPAddress, Port, cts.Token);
 
                 Logger.Debug($"Sending command: {toSend}");
                 cts.CancelAfter(2000);

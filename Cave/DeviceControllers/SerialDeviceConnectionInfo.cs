@@ -3,7 +3,7 @@
     public class SerialDeviceConnectionInfo : DeviceConnectionInfo
     {
         public string SerialPort { get; set; }
-        public int Baudrate { get; set; }
+        public int? Baudrate { get; set; }
 
         public SerialDeviceConnectionInfo( string port, int baudrate )
         {

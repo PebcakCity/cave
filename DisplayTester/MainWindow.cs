@@ -168,24 +168,28 @@ namespace Cave.DisplayTester
 
         private void InitializeControls()
         {
-            // Disable all controls except ButtonConnect, EntryAddress, EntryPort
-            GridControlsChannelVolume.Sensitive = false;
-            GridControlsMedia.Sensitive = false;
-            GridControlsBackHome.Sensitive = false;
-            GridControls.Sensitive = false;
-            ButtonDisconnect.Sensitive = false;
-            ButtonBlank.Sensitive = false;
-            ButtonMute.Sensitive = false;
-            ButtonOn.Sensitive = false;
-            ButtonOff.Sensitive = false;
-            ButtonExecute.Sensitive = false;
-            ButtonClear.Sensitive = false;
-            EntryDebugCommand.Sensitive = false;
+            // Disable these until we've connected to a device that supports them
+            DisableWidgets(
+                GridControlsChannelVolume,
+                GridControlsMedia,
+                GridControlsBackHome,
+                GridControls,
+                ButtonDisconnect,
+                ButtonBlank,
+                ButtonMute,
+                ButtonOn,
+                ButtonOff,
+                ButtonExecute,
+                ButtonClear,
+                EntryDebugCommand
+                );
 
-            ButtonConnect.Sensitive = true;
-            ComboBoxDeviceClass.Sensitive = true;
-            EntryAddress.Sensitive = true;
-            EntryPort.Sensitive = true;
+            EnableWidgets(
+                ButtonConnect,
+                ComboBoxDeviceClass,
+                EntryAddress,
+                EntryPort
+                );
         }
 
         private void WindowDeleteEventHandler( object sender, DeleteEventArgs args )
@@ -243,27 +247,22 @@ namespace Cave.DisplayTester
                     switch ( deviceClass )
                     {
                         case nameof(NECProjector):
-                            var connectionInfo = new NetworkDeviceConnectionInfo(addressOrDevice, portOrBaudrate);
-                            DisplayDevice = new NECProjector("Office projector", connectionInfo);
-                            Unsubscriber = DisplayDevice.Subscribe(this);
-                            await DisplayDevice.Initialize();
-                            EnableControlsForDevice(DisplayDevice);
+                            DisplayDevice = new NECProjector("NEC over LAN",
+                                new NetworkDeviceConnectionInfo(addressOrDevice, portOrBaudrate));
                             break;
                         case nameof(RokuTV):
-                            DisplayDevice = new RokuTV("Home TV", addressOrDevice, portOrBaudrate);
-                            Unsubscriber = DisplayDevice.Subscribe(this);
-                            await DisplayDevice.Initialize();
-                            EnableControlsForDevice(DisplayDevice);
+                            DisplayDevice = new RokuTV("My Roku",
+                                new NetworkDeviceConnectionInfo(addressOrDevice, portOrBaudrate));
                             break;
                             // hack for serial support
                         case "NECProjector (serial)":
-                            var serialInfo = new SerialDeviceConnectionInfo(addressOrDevice, portOrBaudrate);
-                            DisplayDevice = new NECProjector("Office projector", serialInfo);
-                            Unsubscriber = DisplayDevice.Subscribe(this);
-                            await DisplayDevice.Initialize();
-                            EnableControlsForDevice(DisplayDevice);
+                            DisplayDevice = new NECProjector( "NEC over RS232",
+                                new SerialDeviceConnectionInfo(addressOrDevice, portOrBaudrate));
                             break;
                     }
+                    Unsubscriber = DisplayDevice.Subscribe(this);
+                    await DisplayDevice.Initialize();
+                    EnableControlsForDevice(DisplayDevice);
                 }
             }
             catch (Exception ex)

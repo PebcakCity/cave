@@ -233,7 +233,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 M322X, might be the same on other models.
 
                 To replicate, just briefly disconnect your projector from the serial cable (ie. unplug the USB UART
-                adapter cable from either end - your computer or the projector will do), plug it back in and try the
+                adapter cable from either end - your computer or the projector), plug it back in and try the
                 GetModelNumber or GetSerialNumber command.  Both will fail every time until the projector loses power
                 and is plugged back in again, or at least until you start the projector and power it off again by
                 whatever means (power button, remote, serial/socket command).
@@ -241,13 +241,14 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 Anyway, I had failed to add any error checking code here, so it was throwing a full stack trace every
                 time I swapped from one projector to another during testing.  I originally discovered this fluke while
                 playing in python months ago but never figured out what caused it or if it happened with every model...
-                I need to test some more models, just don't really have a lot of them to test (and I'm kindof lazy).
+                I've tested 3 models (M300X, M311X, M322X) but only the M322X seems to have the issue.  These are all
+                the models I have right now.
 
                 Instead of throwing a NECProjectorCommandException here we just return null if the response was not the
                 one we were expecting.  This is so that GetDeviceInfo can keep on trucking and run the commands that
                 seem to be unaffected by this weird issue (GetStatus, LampInfo, etc).
 
-                So depending on whether other models are affected by this, seeing a projector in your UI whose model
+                So depending on whether any other models are affected by this, seeing a projector in your UI whose model
                 and serial info are reported null could indicate that you need to go physically replug the cables in
                 that room.
                 */

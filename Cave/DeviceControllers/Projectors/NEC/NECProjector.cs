@@ -5,6 +5,7 @@ using System.Text;
 using NLog;
 
 using Cave.Interfaces;
+using System.Runtime.InteropServices;
 
 namespace Cave.DeviceControllers.Projectors.NEC
 {
@@ -129,6 +130,11 @@ namespace Cave.DeviceControllers.Projectors.NEC
                     throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6]);
 
                 Info.PowerState = PowerState.FromValue(response.Data[6]);
+
+                // Temporary PowerState logging... I keep discovering new undocumented values, so I'm trying to get an
+                // idea of exactly what the pattern of state changes looks like by logging them one after another.
+                Logger.Debug($"{Info.PowerState}");
+
                 var inputTuple = (response.Data[8], response.Data[9]);
                 Info.InputSelected = InputStates.GetValueOrDefault(inputTuple);
                 Info.IsDisplayMuted = (response.Data[11] == 0x01);
@@ -321,6 +327,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                         throw new OperationCanceledException("PowerOn operation timed out.");
 
                     var state = await GetPowerState() as PowerState;
+                    NotifyObservers($"Power state: {state}", MessageType.Debug);
 
                     if ( state is null )
                         throw new InvalidOperationException("Failed to read device state.  Please notify IT.");

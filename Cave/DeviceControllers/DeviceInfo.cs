@@ -33,5 +33,5 @@ namespace Cave.DeviceControllers
         public string? Message { get; set; }
         public MessageType MessageType { get; set; }
     }
-    public enum MessageType { Info, Success, Warning, Error }
+    public enum MessageType { Debug, Info, Success, Warning, Error }
 }

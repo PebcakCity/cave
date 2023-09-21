@@ -87,7 +87,15 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /* The manual lists the failure code for this command with 0x02 as its fifth byte, same as GetStatusFailure,
          * however the success response has 0x12 as the fifth byte. I guess I have no way of knowing what's right and
          * it's unlikely that I ever will. If it's truly the same code, whichever one is encountered first by GetAll()
-         * (may be non-deterministic?) would be returned when getting the name. We obviously don't want that, so ... */
+         * (may be non-deterministic?) would be returned when getting the name. We obviously don't want that, so ... 
+         
+         * UPDATE: 2023-09-21 I can confirm that the failure response to GetSerial is (more or less) identical to that
+         * of GetStatus.  The fifth byte is 0x02, not 0x12.  This discovery came while experimenting with a weird issue
+         * involving which order you plugged the serial/power cables into the projector in.  Plug serial in first, then
+         * power, and neither the GetModelNumber nor GetSerialNumber commands work.  But it's just those commands
+         * apparently.  Everything else seems fine?  The failure response returned by the GetSerialNumber command is
+         * logged as 'GetStatusFailure' because at least those 3 documented bytes are the same.
+         */
         public static Response GetSerialInfoFailure = new( new byte[] { 0xa0, 0xbf, wild, wild, 0x12, wild, wild, wild }, nameof(GetSerialInfoFailure) );
         public static Response VideoMuteOnFailure = new( new byte[] { 0xa2, 0x10, wild, wild, 0x02, wild, wild, wild }, nameof(VideoMuteOnFailure) );
         public static Response VideoMuteOffFailure = new( new byte[] { 0xa2, 0x11, wild, wild, 0x02, wild, wild, wild }, nameof(VideoMuteOffFailure) );

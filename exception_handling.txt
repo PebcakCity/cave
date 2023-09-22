@@ -1,0 +1,140 @@
+Loud logging: logging an error message with particular messaging that we
+could search log files for, possibly in all caps, with decorators around it,
+etc.  Also possibly rethrowing with our own name.
+
+
+--------------------------------------------------
+
+
+Should we make response.IndicatesFailure check for length >= 7?
+    pros:
+        1. we don't have to worry about throwing out of range when checking
+           this in every controller method
+        2. ?
+    cons:
+        1. if NEC changes firmware & every response is no longer >= 7 bytes
+           we won't catch these errors any more.  not likely but possible?
+        2. ?
+
+What if we instead make a second property/method for determining a) if Data[0]
+starts 'a' something and b) if the data is longer than 7/8 bytes?
+
+If typical command failure responses are x number of bytes, we might shave a
+tiny bit by checking up front whether the response is exactly x bytes or longer
+
+If longer, continue on with the rest of the method.
+
+Is that useful?  Does it eliminate any code from controller methods or make
+them any simpler?
+
+class Response
+{
+    ...
+    public bool HasErrorCode
+    {
+        get => ( this.IndicatesFailure && this.Data.Length >= 7 ); 
+    }
+
+    or even
+
+    public (int, int)? GetErrorTuple
+    {
+        if ( this.IndicatesFailure && this.Data.Length >= 7 )
+            return (Data[5], Data[6]);
+        return null;
+    }
+}
+
+--------------------------------------------------
+
+
+NECProjectorCommandException needs optional Command argument so it can add
+command name to exception data.  Could help make logs easier to read.
+
+NECProjectorCommandException.CreateNewFromValues(int, int, Command? command)
+    1. create exception instance out of values in data
+    2. add ErrorCode, whatever good that does
+    3. if command isn't null, add the command name too
+
+
+GetLampInfo(LampInfo lampInfo)
+{
+    var response = ...
+    if (response.IndicatesFailure)
+        throw NECProjectorCommandException.CreateNewFromValue(
+            response.GetErrorTuple(), Command.GetLampInfo
+        );
+}
+
+
+
+---------------------------------------------------------------------------
+General exception flow
+----------------------
+
+client.sendcommandasync
+    // send command, get response
+    ...
+    if response length is 0
+        _log socket/serial exception_
+        throw (back to controller)
+    return response
+
+
+
+getlampinfo
+    // device apparently doesn't have a lamp, user doesn't need to know
+    if response indicates failure && response length >= 7
+        log the error
+        don't throw
+    else
+        ...
+
+
+any other controller method
+    try
+        var response = sendcommand...
+        ...
+
+    // GUI should be loud here so maybe user will tell IT
+    catch socket/serial exception (NO data returned)
+        don't log it (already logged)
+        throw (back to GUI to notify user)
+
+    // user will get notice command wasn't accepted & _might_ tell IT
+    catch bad command exception (device says command unrecognized)
+        _package command in exception data, see above_
+        log it
+        throw (back to GUI to notify user)
+
+    // Means power state or input value was not found in API, meaning our
+    // API is out of date.  Log should be LOUD, GUI silent.
+    // *** instead of allowing an exception like this to happen, we can use
+    // TryGetValue/TryFromValue.  If return value is false, we throw OUR OWN
+    // exception that we can log & search for more easily ***
+    catch value not found exception
+        log it LOUD
+        don't throw
+
+    // index out of range means we either didn't get the full response
+    // (bad connection?) OR can mean our API is out of date
+    catch index out of range exception
+        log it LOUD
+        don't throw
+
+    catch any other exception
+        log it regular
+        don't throw
+
+
+GUImethod
+    try
+        whatever
+
+    catch socket/serial exception
+        toast: tell user of SERIOUS issue
+
+    catch bad command exception
+        toast: tell user minor issue occurred, suggest power cycling device
+
+    don't log anything (everything is already logged by this point)

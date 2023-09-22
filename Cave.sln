@@ -13,9 +13,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CaveTests", "CaveTests\Cave
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{E5D86EE2-BC06-466C-8BC9-E39F2E237FCD}"
 	ProjectSection(SolutionItems) = preProject
-		blazor_app_thoughts.txt = blazor_app_thoughts.txt
-		app_config_thoughts.txt = app_config_thoughts.txt
+		app_config.txt = app_config.txt
+		exception_handling.txt = exception_handling.txt
 		todo.txt = todo.txt
+		blazor_app.txt = blazor_app.txt
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DisplayTester", "DisplayTester\DisplayTester.csproj", "{15F3DFB6-2402-420A-9EC8-E85C285E2F01}"

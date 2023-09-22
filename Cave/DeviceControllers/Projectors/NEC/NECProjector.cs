@@ -130,11 +130,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                     throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6]);
 
                 Info.PowerState = PowerState.FromValue(response.Data[6]);
-
-                // Temporary PowerState logging... I keep discovering new undocumented values, so I'm trying to get an
-                // idea of exactly what the pattern of state changes looks like by logging them one after another.
-                Logger.Debug($"{Info.PowerState}");
-
+                Logger.Debug($"Device power state: {Info.PowerState}");
                 var inputTuple = (response.Data[8], response.Data[9]);
                 Info.InputSelected = InputStates.GetValueOrDefault(inputTuple);
                 Info.IsDisplayMuted = (response.Data[11] == 0x01);
@@ -226,22 +222,26 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await Client!.SendCommandAsync(Command.GetModelNumber);
 
-                /* For some strange reason on certain models, the GetModelNumber command will fail to execute over
-                a serial port the first few times it's tried after plugging the projector in and before powering it on.
-                You get a "The command cannot be recognized" error.  When you see this failure, try unpluging the power
-                cord from the back of the projector, plugging it back in and then turning it on.  Then the command will
-                execute normally, whether the projector is powered on or not.  Weird....  Only model I have that it does
-                that on is the M322X, others don't seem to have this issue.  Might just be some weird standby issue.
+                /* For some reason on certain models, the GetModelNumber command will fail to execute over a serial
+                port after plugging the projector into a power source before actually powering it on.  You get a
+                "The command cannot be recognized" error.  When you see this failure, try powering the device on first.
+                Then you can power it back off if you want and all commands will execute normally.  The only model I
+                have that this seems to affect is the M322X.  It might affect other models, who knows?
 
-                Other commands affected by this are GetSerialNumber and GetErrors.  Power the projector on and off
-                again and all the commands are available.
+                This also affects the GetSerialNumber and GetErrors commands.  Neither will execute over a serial port
+                without power cycling the device.  What's even odder is that GetModelNumber and GetErrors will happily
+                work over TCP without the power cycle, but GetSerialNumber refuses over either RS232 or TCP.
 
-                Instead of throwing a NECProjectorCommandException here we just return null if the response was not the
-                one we were expecting.  This is so that GetDeviceInfo can keep on trucking and run the commands that
-                seem to be unaffected by this weird issue (GetStatus, LampInfo, etc).
+                Anyway instead of throwing an exception here on command failure, we just return null if the response
+                was not the one we were expecting.  This is so that Initialize() does not choke and can continue to
+                execute the commands that seem unaffected by this issue, such as GetLampInfo.
 
                 So depending on whether any other models are affected by this, seeing a projector in your UI whose model
                 and serial info are reported null could indicate that you need to power cycle that machine.
+
+                This kindof matches with what NaViset Administrator says - that a device has to be power cycled as part
+                of a "full refresh" in order to get some of its information.  Just strange that on some models that
+                unavailable information includes the model/serial number and on others it doesn't?
                 */
                 if ( response.Matches(Response.GetModelInfoSuccess) )
                 {

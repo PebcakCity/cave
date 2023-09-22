@@ -226,31 +226,22 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 var response = await Client!.SendCommandAsync(Command.GetModelNumber);
 
-                /* For some strange reason on certain models, the GetModelNumber command will fail when the serial line
-                was connected to the projector _after_ the projector was plugged into power.  You get a "The command
-                cannot be recognized" error.  When you see this failure, unplug the power cord from the back of the
-                projector, then plug it back in and the command will execute normally.  Weird....  Have tested this on
-                M322X, might be the same on other models.
+                /* For some strange reason on certain models, the GetModelNumber command will fail to execute over
+                a serial port the first few times it's tried after plugging the projector in and before powering it on.
+                You get a "The command cannot be recognized" error.  When you see this failure, try unpluging the power
+                cord from the back of the projector, plugging it back in and then turning it on.  Then the command will
+                execute normally, whether the projector is powered on or not.  Weird....  Only model I have that it does
+                that on is the M322X, others don't seem to have this issue.  Might just be some weird standby issue.
 
-                To replicate, just briefly disconnect your projector from the serial cable (ie. unplug the USB UART
-                adapter cable from either end - your computer or the projector), plug it back in and try the
-                GetModelNumber or GetSerialNumber command.  Both will fail every time until the projector loses power
-                and is plugged back in again, or at least until you start the projector and power it off again by
-                whatever means (power button, remote, serial/socket command).
-
-                Anyway, I had failed to add any error checking code here, so it was throwing a full stack trace every
-                time I swapped from one projector to another during testing.  I originally discovered this fluke while
-                playing in python months ago but never figured out what caused it or if it happened with every model...
-                I've tested 3 models (M300X, M311X, M322X) but only the M322X seems to have the issue.  These are all
-                the models I have right now.
+                Other commands affected by this are GetSerialNumber and GetErrors.  Power the projector on and off
+                again and all the commands are available.
 
                 Instead of throwing a NECProjectorCommandException here we just return null if the response was not the
                 one we were expecting.  This is so that GetDeviceInfo can keep on trucking and run the commands that
                 seem to be unaffected by this weird issue (GetStatus, LampInfo, etc).
 
                 So depending on whether any other models are affected by this, seeing a projector in your UI whose model
-                and serial info are reported null could indicate that you need to go physically replug the cables in
-                that room.
+                and serial info are reported null could indicate that you need to power cycle that machine.
                 */
                 if ( response.Matches(Response.GetModelInfoSuccess) )
                 {

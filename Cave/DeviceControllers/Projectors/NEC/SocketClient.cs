@@ -15,10 +15,6 @@ namespace Cave.DeviceControllers.Projectors.NEC
             (IPAddress, Port) = (address, port);
         }
 
-        // todo: refactor SocketClient to take an IP address & port again (non-nullable) as part of the larger refactor to
-        // make NDCI.Port nullable.  This way if port numbers are not provided in configuration, the controllers and/or
-        // controller helpers like *Client can still provide their own default.
-
         public static async Task<SocketClient> Create(string address, int port)
         {
             try
@@ -37,10 +33,11 @@ namespace Cave.DeviceControllers.Projectors.NEC
 
         private async Task TestConnection()
         {
+            using Socket socket = new (AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            using CancellationTokenSource cts = new();
+
             try
             {
-                using Socket socket = new (AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                using CancellationTokenSource cts = new();
                 cts.CancelAfter(3000);
                 await socket.ConnectAsync(IPAddress, Port, cts.Token);
                 Logger.Info($"Connection success.");
@@ -51,7 +48,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 /* Rethrow with a slightly more useful error message */
                 string error = "Connection attempt timed out.";
                 Logger.Error(error);
-                throw new OperationCanceledException(error);
+                throw new OperationCanceledException(error, cts.Token);
             }
             catch(Exception ex)
             {
@@ -62,12 +59,12 @@ namespace Cave.DeviceControllers.Projectors.NEC
 
         public async Task<Response> SendCommandAsync(Command toSend)
         {
+            using Socket socket = new(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            using CancellationTokenSource cts = new();
+
             try
             {
                 byte[] responseBytes = new byte[512];
-
-                using Socket socket = new(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                using CancellationTokenSource cts = new();
 
                 cts.CancelAfter(2000);
                 await socket.ConnectAsync(IPAddress, Port, cts.Token);
@@ -81,6 +78,9 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 int bytesRead = await socket.ReceiveAsync(responseBytes, SocketFlags.None, cts.Token);
                 Logger.Debug($"Read {bytesRead} bytes.");
 
+                if ( bytesRead < 1 )
+                    throw new SocketException();
+
                 socket.Shutdown(SocketShutdown.Both);
                 Response response = new(responseBytes[0..bytesRead]);
                 Logger.Debug($"Received response: {response}");
@@ -90,7 +90,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 string error = "SendCommandAsync: Operation timed out.";
                 Logger.Error(error);
-                throw new OperationCanceledException(error);
+                throw new OperationCanceledException(error, cts.Token);
             }
             catch(Exception ex)
             {

@@ -140,7 +140,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
         /// </summary>
         /// <returns>A text string containing the XML response of the command.
         /// </returns>
-        private async Task<string> GetXmlDeviceInfo(CancellationToken token)
+        private async Task<string> GetXmlDeviceInfo(CancellationToken token = default)
         {
             try
             {
@@ -156,7 +156,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
         /// </summary>
         /// <returns>A text string containing the XML response of the command.
         /// </returns>
-        private async Task<string> GetXmlMediaPlayerInfo(CancellationToken token)
+        private async Task<string> GetXmlMediaPlayerInfo(CancellationToken token = default)
         {
             try
             {
@@ -264,18 +264,18 @@ namespace Cave.DeviceControllers.Televisions.Roku
         /// code and HTTP response.</returns>
         /// <exception cref="HttpRequestException">Thrown if the status code
         /// is anything but success (< 200 or > 299).</exception>
-        private async Task<HttpResponseMessage> KeyPress( string key, CancellationToken? token = null )
+        private async Task<HttpResponseMessage> KeyPress( string key, CancellationToken token = default )
         {
             CancellationTokenSource? cts = null;
             try
             {
-                if ( token == null )
+                if ( token == CancellationToken.None )
                 {
                     cts = new();
                     cts.CancelAfter(2000);
                     token = cts.Token;
                 }
-                var response = await Client!.PostAsync($"/keypress/{key}", null, (CancellationToken)token);
+                var response = await Client!.PostAsync($"/keypress/{key}", null, token);
                 if ( !response.IsSuccessStatusCode )
                     throw new HttpRequestException($"Request failed: /keypress/{key}");
                 return response;
@@ -718,7 +718,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
         {
             try
             {
-                return await KeyPress(key, null);
+                return await KeyPress(key, CancellationToken.None);
             }
             catch { throw; }
         }

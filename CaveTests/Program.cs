@@ -97,13 +97,15 @@ namespace CaveTests
             try
             {
                 Console.WriteLine("-----Test 6-----");
-                throw NECProjectorCommandException.CreateNewFromValues(0x02, 0x0f);
+                throw NECProjectorCommandException.CreateNewFromValues(0x02, 0x0f, Command.GetStatus);
             }
             catch ( Exception ex )
             {
                 // will print "There is no authority necessary for the operation."
                 Console.WriteLine(ex.Message);
-                // will print "NECProjectorCommandException: (020f) There is no authority necessary for the operation."
+                // will print "NECProjectorCommandException: There is no authority necessary for the operation."
+                //            "     ErrorCode :     020f"
+                //            "     Command   :     GetStatus"
                 Console.WriteLine(ex);
             }
         }
@@ -114,7 +116,7 @@ namespace CaveTests
             {
                 Console.WriteLine("-----Test 7-----");
                 // will throw ArgumentOutOfRangeException
-                throw NECProjectorCommandException.CreateNewFromValues(0xf0, 0x0d);
+                throw NECProjectorCommandException.CreateNewFromValues(0xf0, 0x0d, Command.SelectInput);
             }
             catch ( Exception ex )
             {

@@ -1,4 +1,6 @@
-﻿namespace Cave.DeviceControllers.Projectors.NEC
+﻿using System.Collections;
+
+namespace Cave.DeviceControllers.Projectors.NEC
 {
     /// <summary>
     /// Represents an error due to a failed command
@@ -64,11 +66,13 @@
         /// an <see cref="ArgumentOutOfRangeException"/> is thrown.
         /// </summary>
         /// <param name="errorTuple">A value tuple of two <see cref="int"/> values.</param>
+        /// <param name="command">The NECProjector <see cref="Command"/> that failed.</param>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if the tuple argument is determined to be invalid,
         /// that is, there is no known NEC projector error code matching this tuple.</exception>
         /// <returns><see cref="NECProjectorCommandException"/> instance with message retrieved using the provided
         /// tuple.</returns>
-        public static NECProjectorCommandException CreateNewFromValues((int byte1, int byte2) errorTuple)
+        public static NECProjectorCommandException CreateNewFromValues((int byte1, int byte2) errorTuple,
+            Command? command = null)
         {
             if ( ! ErrorCodes.TryGetValue(errorTuple, out string? message) )
                 throw new ArgumentOutOfRangeException(
@@ -77,6 +81,8 @@
                 );
             var ex = new NECProjectorCommandException(message);
             ex.Data.Add("ErrorCode", string.Format("{0:x2}{1:x2}", errorTuple.byte1, errorTuple.byte2));
+            if ( command is not null )
+                ex.Data.Add("Command", command.Name);
             return ex;
         }
 
@@ -87,18 +93,23 @@
         /// </summary>
         /// <param name="byte1">Value 1</param>
         /// <param name="byte2">Value 2</param>
+        /// <param name="command">The NECProjector <see cref="Command"/> that failed.</param>
         /// <returns><see cref="NECProjectorCommandException"/> instance with message retrieved using the provided
         /// values.</returns>
-        public static NECProjectorCommandException CreateNewFromValues( int byte1, int byte2 )
+        public static NECProjectorCommandException CreateNewFromValues( int byte1, int byte2, Command? command = null )
         {
-            return CreateNewFromValues((byte1, byte2));
+            return CreateNewFromValues((byte1, byte2), command);
         }
 
         public override string ToString()
         {
-            var errorCode = Data.Contains("ErrorCode") ? Data["ErrorCode"] : null;
-            return $"{nameof(NECProjectorCommandException)}: " +
-                ((errorCode is null) ? $"{Message}" : $"({errorCode}) {Message}");
+            string errorString = $"{nameof(NECProjectorCommandException)}: {Message}\n";
+            foreach ( DictionaryEntry de in Data )
+                errorString += string.Format("     {0,-10}:     {1,-20}\n", de.Key, de.Value);
+            //var errorCode = Data.Contains("ErrorCode") ? Data["ErrorCode"] : null;
+            //return $"{nameof(NECProjectorCommandException)}: " +
+            //    ((errorCode is null) ? $"{Message}" : $"({errorCode}) {Message}");
+            return errorString;
         }
 
         public static implicit operator string(NECProjectorCommandException ex) => ex.ToString();

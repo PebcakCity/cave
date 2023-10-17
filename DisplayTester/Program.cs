@@ -1,4 +1,8 @@
+using NLog;
 using Gtk;
+
+// NiceLog
+using Cave.Utils;
 
 namespace Cave.DisplayTester
 {
@@ -7,6 +11,11 @@ namespace Cave.DisplayTester
         [STAThread]
         public static void Main( string[] args )
         {
+            NLog.LogManager.Setup().SetupExtensions(ext =>
+            {
+                ext.RegisterLayoutRenderer<NiceLog>();
+            });
+
             Application.Init();
 
             var app = new Application("org.DisplayTester.DisplayTester", GLib.ApplicationFlags.None);

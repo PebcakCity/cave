@@ -304,7 +304,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 {
                     Logger.Warn("Device is reporting the following internal error(s):");
                     foreach ( var error in errors )
-                        Logger.Warn(error);
+                        Logger.Warn(error.Message);
                 }
                 return errors;
             }

@@ -6,6 +6,10 @@
 	  <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <PathMap>$(MSBuildProjectDirectory)\=DisplayTester</PathMap>
+  </PropertyGroup>
+
   <ItemGroup>
     <None Remove="**\*.glade" />
     <EmbeddedResource Include="**\*.glade">

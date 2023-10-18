@@ -1,3 +1,65 @@
+Refactorings:
+
+Decide on the best way to fix issues with NECProjector commands failing on certain models without a power cycle.
+Issue is detailed in comments for NECProjector.GetModelNumber.
+
+The way it works currently:
+Certain projectors (M322X) will not accept certain commands until the device is power cycled.  Even if power on fails
+because the lamp is dead or even missing entirely, that still makes the projector happy enough and it will start
+accepting the offending command after that.  It simply won't work until you at least try to power the device on.  Over
+TCP, just the GetSerialNumber command fails. Over RS232, it's GetSerialNumber, GetModelNumber, and GetErrors.
+
+Currently the only time GetModelNumber and GetSerialNumber are called is during Initialize().  This is called when the
+controller is first instantiated (which would ideally happen at application startup).  (But it is public so it could 
+theoretically be called whenever.)
+
+If the M322X is unplugged from AC and plugged back in (or loses power some other way), the commands above will fail
+until a power cycle is attempted, so any application that _only_ checks model/serial/errors at startup would need to be
+restarted to be able to correctly report these data.  This is obviously not ideal.  An application like a classroom
+control system would be long-running and would have to be restarted after the power cycle to fully work again.
+
+There's no way to fix this weird issue on the projector's end but we can fix the class so that model/serial info
+is at least able to be requested more often than a single time during the lifecycle of any application.
+
+Don't really want to add burden of model/serial/error info capture every single time GetDeviceInfo runs (which is fairly
+often) so a different method for retrieval of this data is needed.
+
+Options:
+1) Add public GetAllDeviceInfo method that does retrieve these and is only called when total data refresh is requested
+(by user or periodically by application on a timer?)
+  - Cons:
+    a) We now have another method that apps have to know about.  If a control sys app knows it's using a NECProjector
+    controller, it probably needs to set a timer to periodically call this, or offer an intuitive way for the user to
+    do the same.  I really only want to do this if pretty much all controllers work the same way, having one method to
+    get everything and another one to get just the stuff that regularly changes.
+
+    b) GetDeviceInfo already calls NotifyObservers after getting what it needs, does GetAllDeviceInfo do the same?
+    GetModelNumber, GetSerialNumber, & GetErrors do NOT call NotifyObservers.  I guess GetAllDeviceInfo could call these
+    first to store/retrieve the model/serial/error info and _then_ call GetDeviceInfo to get the rest & send everything
+    to the app.  Seems messy but maybe no messier than it already is.  (Already going to have to change name of
+    GetDeviceInfo again to something more appropriate/less confusing, GetCurrentDeviceState maybe).
+
+    c) It's already getting confusing having several types of helper methods that work differently.  Some
+    (GetModel/GetSerial) get/return _and_ store values for NotifyObservers to send later.  Some (GetErrors) just return
+    data to the caller and don't store anything anywhere or interact with NotifyObservers whatsoever.  GetDebugInfo
+    basically does exactly what GetAllDeviceInfo _would_ do except it builds and returns a string containing the data it
+    got.  Introducing GetAllDeviceInfo will have to make it less (not more) confusing to be considered a win.
+
+    ...It's starting to make me want to reevaluate the whole observer pattern system I've implemented (wrapping my
+    library data up and periodically shipping it to the app in batches for intepretation) and switch to something like
+    INotifyPropertyChanged for everything.  No more DeviceInfo struct, just events firing directly in the app any time
+    a device property changes.  This might be best? I'd like to support both but I haven't found a clean way to do both
+    paradigms using the same library.  Observer works best with a DeviceInfo struct, INotify works best either with
+    the properties defined directly on NECProjector or at best in a reference type (class) member variable of NECP
+    (making DeviceInfo a class).  Setting events on structs and having them copied when passed by value makes me very
+    uneasy.
+
+2) Initialize() already calls GetModel/GetSerial.  Having a way for the app/user to force Initialize() to run again
+after the projector is power cycled repopulates these data.  It also creates a new client object..., not really
+a big deal right now I guess but if clients change substantially it could be.  Keeping sockets open, etc.
+
+========================================================================================================================
+
 Things to do/test/play with/figure out when I have time:
 
   - AppConfig injection

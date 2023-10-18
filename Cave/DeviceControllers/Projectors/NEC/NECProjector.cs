@@ -244,6 +244,19 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 This kindof matches with what NaViset Administrator says - that a device has to be power cycled as part
                 of a "full refresh" in order to get some of its information.  Just strange that on some models that
                 unavailable information includes the model/serial number and on others it doesn't?
+
+                This could be an issue for long-running applications like a classroom control system.  If the whole
+                system loses and regains power, the projector will need to actually be powercycled before the control
+                system will be able to successfully read the serial number (or model/error information if connected via
+                RS232).  If we only read that information when the application first starts up, it will never get set.
+                We'd have to manually restart the application _after_ power cycling the connected projector.  So I think
+                we might need at least refactor so that model/serial/error information is checked periodically after
+                application startup.  Either manually (as part of the GetDebugInfo() routine) or during a method that is
+                called periodically to refresh device status (like GetDeviceInfo()).  I'd rather not add a bunch of
+                extra calls to every GetDeviceInfo() call.  This gets called every second during AwaitPowerOn() to
+                check if the device is ready to accept input switching commands... GetDeviceInfo() currently by design
+                fires off only two requests to the projector - GetStatus and GetLampInfo(UsageTimeSeconds) - because
+                these are the only data likely to change during projector usage.
                 */
                 if ( response.Matches(Response.GetModelInfoSuccess) )
                 {

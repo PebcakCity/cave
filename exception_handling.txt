@@ -138,3 +138,72 @@ GUImethod
         toast: tell user minor issue occurred, suggest power cycling device
 
     don't log anything (everything is already logged by this point)
+
+
+--------------
+
+To make socket & serial based clients work interchangeably, make them both throw
+same exception on failure to complete read, probably TimeoutException as
+SerialPort already throws this on failure to read.
+
+SocketClient
+{
+    SendCommandAsync(...)
+    {
+    ...
+        int bytesRead = await ReceiveAsync(...)
+        if (bytesRead <= 0)
+            throw new SocketException("SendCommandAsync: ReceiveAsync FAILED, check connection.");
+            //^^^^^^^^^^^^^^^^^^^^^^^
+            // Do we use our own message here to log loudly, or do we just call SocketException()
+            // to let the OS fill in the last error?  Does bytesRead == 0 absolutely mean there
+            // was a socket error?
+            // https://learn.microsoft.com/en-us/dotnet/api/system.net.sockets.socket.receive?view=net-7.0
+            // "If the remote host shuts down the Socket connection with the Shutdown method, and all available data
+            // has been received, the Receive method will complete immediately and return zero bytes."  This means the
+            // host disconnected us and we're not getting any more data on this socket.
+
+            // For Async versions, ReceiveAsync can throw SocketException on error accessing the socket, and some
+            // versions of ReceiveAsync include language saying it will store in the returned task all exceptions
+            // that can be thrown by its "synchronous counterpart".  Some of the variants do not include this language
+            // in the comments.  ReceiveAsync(SocketAsyncEventArgs) says that bytesRead == 0 means a graceful shutdown
+            // occurred with stream based (TCP) sockets and that "no more bytes will ever be read".  Doesn't really
+            // sound like an OS error occurred and hence calling SocketException() default constructor might not provide
+            // any useful info about what actually happened if it failed to get any bytes... So I lean toward throwing
+            // an exception with a useful, searchable message.
+
+    ...
+        // Some OS socket problem
+        catch(SocketException se)
+        {
+            Logger.Error(se);
+            throw;
+        }
+    ...
+        // Thrown when the cancellation token expires before ReceiveAsync finishes
+        catch(OperationCanceledException)
+        {
+            TimeoutException te = new("SendCommandAsync: Send/receive operation timed out");
+            te.Data.Add("Command", toSend);
+            Logger.Error(te);
+            throw te;
+        }
+    }
+}
+
+SerialClient
+{
+    SendCommandAsync(...)
+    {
+    ...
+        // Thrown by Read() when no bytes are available
+        catch(TimeoutException)
+        {
+            TimeoutException te = new("SendCommandAsync: Send/receive operation timed out")
+            te.Data.Add("Command", toSend);
+            Logger.Error(te);
+            throw te;
+        }
+    }
+}
+

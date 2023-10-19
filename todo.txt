@@ -58,6 +58,32 @@ Options:
 after the projector is power cycled repopulates these data.  It also creates a new client object..., not really
 a big deal right now I guess but if clients change substantially it could be.  Keeping sockets open, etc.
 
+For now I've done the following:
+
+In NECProjector:
+1. renamed GetDeviceInfo to RefreshState.  GetDeviceInfo currently only gets transitory state anyway and since we have
+    methods like GetPowerState, the name tracks.  GetInputSelection is also be renamed GetInputState to sell it harder.
+    Same with DeviceInfo.InputSelected, renamed it DeviceInfo.InputState.  IsDisplayMuted -> DisplayMuteState and
+    likewise with audio.  Trying to reinforce the distinction that Info = it doesn't change, State = it does.
+    Thought about renaming DeviceInfo.ModelNumber -> ModelNumberInfo and same with Serial* but that seems redundant.
+2. implemented RefreshAllDeviceInfo: calls GetModelNumber, GetSerialNumber, RefreshState (since model/serial is part
+    of DeviceInfo struct, the name tracks)
+3. have GetDebugInfo call RefreshAllDeviceInfo (instead of RefreshState) to try updating everything before building &
+    returning string.  This way apps that are not long running like DisplayTester can at least query this info without
+    restarting.
+
+In RokuTV:
+1. renamed GetDeviceInfo to RefreshAllDeviceInfo.  This is the only method Roku needs as all data pretty much comes from
+    the same 2 helper methods and there's not really a clear distinction between "info" and "state".  Both helpers get
+    "state" information -- GetXmlDeviceInfo gets power state, GetXmlMediaPlayerInfo gets media player state -- but
+    GetXmlDeviceInfo also gets unchanging "info" like model & serial.  3 out of the 4 data retrieved by
+    GetXmlDeviceInfo is stuff that doesn't change.  Only power state changes and there is no getting input or mute state.
+2. GetDebugInfo stays the same as it just calls the two GetXml helpers and returns their strings concatenated.
+
+Each RefreshAllDeviceInfo method should do essentially the same thing in each controller, the only long-term question is
+whether we make it public or not so that long-running control system apps (ie. apps that have no business calling
+GetDebugInfo()) can also call it to get data that failed to retrieve the first time
+
 ========================================================================================================================
 
 Things to do/test/play with/figure out when I have time:

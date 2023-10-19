@@ -13,11 +13,11 @@ namespace Cave.DeviceControllers
 
         /* Power and input states */
         public object? PowerState { get; set; }
-        public object? InputSelected { get; set; }
+        public object? InputState { get; set; }
 
         /* Video/audio mute states */
-        public bool IsDisplayMuted { get; set; }
-        public bool IsAudioMuted { get; set; }
+        public bool DisplayMuteState { get; set; }
+        public bool AudioMuteState { get; set; }
 
         /* More device-specific info */
 
@@ -26,7 +26,7 @@ namespace Cave.DeviceControllers
         public int? LampHoursUsed { get; set; }
 
         /* TV/media player state */
-        public object? MediaState { get; set; }
+        public object? MediaPlayerState { get; set; }
 
         /* Messaging/reporting */
 

@@ -47,7 +47,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
 
         /// <summary>
         /// Tries to connect to a Roku TV with the connection info specified in
-        /// the constructor.  If successful, it calls <see cref="GetDeviceInfo"/> to
+        /// the constructor.  If successful, it calls <see cref="RefreshAllDeviceInfo"/> to
         /// get some basic information from the device.
         /// </summary>
         public override async Task Initialize()
@@ -59,7 +59,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
                     Client = new HttpClient();
                     Client.BaseAddress = new Uri($"http://{ndci.IPAddress}:{ndci.Port ?? 8060}");
                 }
-                await GetDeviceInfo();
+                await RefreshAllDeviceInfo();
                 Logger.Info("RokuTV Initialized");
             }
             catch ( Exception ex )
@@ -103,12 +103,12 @@ namespace Cave.DeviceControllers.Televisions.Roku
         }
 
         /// <summary>
-        /// Fetches current device state using ECP commands "/query/device-info"
-        /// and "/query/media-player", parses these responses for state info
-        /// and then calls <see cref="NotifyObservers"/> to publish the state
-        /// info to observers.
+        /// Refreshes all available device info by calling ECP commands
+        /// "/query/device-info" and "/query/media-player", then parsing these
+        /// responses.  Calls <see cref="NotifyObservers"/> to publish the
+        /// retrieved info to all observers.
         /// </summary>
-        private async Task GetDeviceInfo()
+        private async Task RefreshAllDeviceInfo()
         {
             CancellationTokenSource cts = new();
             try
@@ -196,11 +196,11 @@ namespace Cave.DeviceControllers.Televisions.Roku
                                     Info.PowerState = state;
                                 break;
                             case "friendly-device-name":
-                                this.Name = reader.ReadElementContentAsString();
+                                base.Name = reader.ReadElementContentAsString();
                                 break;
                             case "player":
-                                var mediaState = reader.GetAttribute("state");
-                                Info.MediaState = GetMediaState(mediaState);
+                                var playerStateString = reader.GetAttribute("state");
+                                Info.MediaPlayerState = GetMediaPlayerState(playerStateString);
                                 break;
                         }
                     }
@@ -215,24 +215,24 @@ namespace Cave.DeviceControllers.Televisions.Roku
 
         /// <summary>
         /// Takes a nullable string representing media player state and returns
-        /// the <see cref="MediaState"/> matching it, or null if
+        /// the <see cref="MediaPlayerState"/> matching it, or null if
         /// <paramref name="state"/> is null or none match.
         /// </summary>
         /// <param name="state"><see cref="System.String"/> representing
         /// playback state.</param>
-        /// <returns>A <see cref="MediaState"/> matching the given string, or
+        /// <returns>A <see cref="MediaPlayerState"/> matching the given string, or
         /// null if none match.</returns>
-        private static MediaState? GetMediaState(string? state)
+        private static MediaPlayerState? GetMediaPlayerState(string? state)
         {
             return state switch
             {
-                "none" => MediaState.None,
-                "play" => MediaState.Playing,
-                "pause" => MediaState.Paused,
-                "buffering" => MediaState.Buffering,
-                "stopped" => MediaState.Stopped,
-                "finished" => MediaState.Finished,
-                "error" => MediaState.Error,
+                "none" => MediaPlayerState.None,
+                "play" => MediaPlayerState.Playing,
+                "pause" => MediaPlayerState.Paused,
+                "buffering" => MediaPlayerState.Buffering,
+                "stopped" => MediaPlayerState.Stopped,
+                "finished" => MediaPlayerState.Finished,
+                "error" => MediaPlayerState.Error,
                 _ => null,
             };
         }
@@ -554,7 +554,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
                     throw new ArgumentException($"Invalid argument type {obj.GetType()}");
 
                 await KeyPress(input);
-                Info.InputSelected = input;
+                Info.InputState = input;
                 NotifyObservers($"Input '{input}' selected.", MessageType.Success);
             }
             catch ( Exception ex )
@@ -599,7 +599,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             try
             {
                 await KeyPress("VolumeUp");
-                Info.IsAudioMuted = false;
+                Info.AudioMuteState = false;
                 NotifyObservers("Volume +1", MessageType.Info);
             }
             catch ( Exception ex )
@@ -618,7 +618,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
             try
             {
                 await KeyPress("VolumeDown");
-                Info.IsAudioMuted = false;
+                Info.AudioMuteState = false;
                 NotifyObservers("Volume -1", MessageType.Info);
             }
             catch ( Exception ex )
@@ -643,7 +643,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
                 await KeyPress("VolumeMute");
                 // Without the device reporting the state of audio muting,
                 // the best we can do is toggle the state on/off and hope it's right. 50/50
-                Info.IsAudioMuted = !Info.IsAudioMuted;
+                Info.AudioMuteState = !Info.AudioMuteState;
                 NotifyObservers();
             }
             catch ( Exception ex )
@@ -659,7 +659,7 @@ namespace Cave.DeviceControllers.Televisions.Roku
 
         /// <summary>
         /// Implements <see cref="IDebuggable.GetDebugInfo"/>.
-        /// Calls <see cref="GetDeviceInfo"/> to get the XML response of the ECP
+        /// Calls <see cref="RefreshAllDeviceInfo"/> to get the XML response of the ECP
         /// commands "/query/device-info" and "/query/media-player" and returns
         /// it for device troubleshooting/debugging purposes. 
         /// </summary>

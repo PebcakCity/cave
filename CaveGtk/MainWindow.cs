@@ -96,9 +96,9 @@ namespace CaveGtk
             var message = "";
 
             message += "Display power: " + status.PowerState?.ToString() ?? "n/a";
-            message += Environment.NewLine + "Input selected: " + status.InputSelected?.ToString() ?? "n/a";
-            message += Environment.NewLine + "Video mute: " + status.IsDisplayMuted ?? "n/a";
-            message += Environment.NewLine + "Audio mute: " + status.IsAudioMuted ?? "n/a";
+            message += Environment.NewLine + "Input selected: " + status.InputState?.ToString() ?? "n/a";
+            message += Environment.NewLine + "Video mute: " + status.DisplayMuteState ?? "n/a";
+            message += Environment.NewLine + "Audio mute: " + status.AudioMuteState ?? "n/a";
             message += Environment.NewLine;
             message += status.MessageType.ToString() ?? "Info";
             message += ": " + status.Message ?? "";

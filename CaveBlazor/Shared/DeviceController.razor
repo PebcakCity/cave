@@ -239,9 +239,9 @@ else
                 + $"({(int)Math.Floor((double)LampHoursUsed/(double)LampHoursTotal*100.0)}%)" 
                 : "n/a";
 
-        this.LastInputSelected = status.InputSelected?.ToString();
-        this.DisplayMuted = status.IsDisplayMuted;
-        this.AudioMuted = status.IsAudioMuted;
+        this.LastInputSelected = status.InputState?.ToString();
+        this.DisplayMuted = status.DisplayMuteState;
+        this.AudioMuted = status.AudioMuteState;
 
         if ( status.Message != null )
             DisplayMessage(status.Message, status.MessageType);

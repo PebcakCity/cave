@@ -115,12 +115,28 @@ namespace Cave.DeviceControllers.Projectors.NEC
         }
 
         /// <summary>
-        /// Fetches current device state, stores it in our
-        /// <see cref="DeviceInfo"/> struct, and calls
-        /// <see cref="NotifyObservers"/> to pass a copy of that struct to
-        /// observers.
+        /// Refreshes all available data for this device.  This includes data
+        /// that should not change (model number, serial number, manufacturer
+        /// lamp hour allotment) as well as data that does (power state, input
+        /// state, display and audio mute states, and current lamp hours used).
         /// </summary>
-        private async Task GetDeviceInfo()
+        private async Task RefreshAllDeviceInfo()
+        {
+            await GetModelNumber();
+            await GetSerialNumber();
+            await GetLampInfo(LampInfo.GoodForSeconds);
+            await RefreshState();
+        }
+
+        /// <summary>
+        /// Refreshes transitory device state (state that changes during
+        /// application lifecycle), stores it in our <see cref="DeviceInfo"/>
+        /// struct, and calls <see cref="NotifyObservers"/> to pass a copy of
+        /// that struct to observers.  State retrieved includes power state,
+        /// input state, display and audio mute states, and current lamp hours
+        /// used.
+        /// </summary>
+        private async Task RefreshState()
         {
             try
             {
@@ -132,9 +148,9 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 Info.PowerState = PowerState.FromValue(response.Data[6]);
                 Logger.Debug($"Device power state: {Info.PowerState}");
                 var inputTuple = (response.Data[8], response.Data[9]);
-                Info.InputSelected = InputStates.GetValueOrDefault(inputTuple);
-                Info.IsDisplayMuted = (response.Data[11] == 0x01);
-                Info.IsAudioMuted = (response.Data[12] == 0x01);
+                Info.InputState = InputStates.GetValueOrDefault(inputTuple);
+                Info.DisplayMuteState = (response.Data[11] == 0x01);
+                Info.AudioMuteState = (response.Data[12] == 0x01);
                 // Get lamp hours if device has a lamp
                 await GetLampInfo(LampInfo.UsageTimeSeconds);
 
@@ -424,7 +440,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         {
             try
             {
-                await GetDeviceInfo();
+                await RefreshState();
                 return Info.PowerState;
             }
             catch ( Exception ex )
@@ -438,12 +454,12 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// Gets the current <see cref="Input"/> selected on the device.
         /// </summary>
         /// <returns>The selected <see cref="Input"/>.</returns>
-        public override async Task<object?> GetInputSelection()
+        public override async Task<object?> GetInputState()
         {
             try
             {
-                await GetDeviceInfo();
-                return Info.InputSelected;
+                await RefreshState();
+                return Info.InputState;
             }
             catch ( Exception ex )
             {
@@ -529,7 +545,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                     throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6],
                         command);
 
-                Info.IsDisplayMuted = muted;
+                Info.DisplayMuteState = muted;
                 NotifyObservers(string.Format("Video mute {0}", ( muted ? "ON" : "OFF" )));
             }
             catch ( Exception ex )
@@ -548,8 +564,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
         {
             try
             {
-                await GetDeviceInfo();
-                return Info.IsDisplayMuted;
+                await RefreshState();
+                return Info.DisplayMuteState;
             }
             catch ( Exception ex )
             {
@@ -594,7 +610,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                     throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6],
                         Command.SelectInput);
 
-                Info.InputSelected = input;
+                Info.InputState = input;
                 NotifyObservers($"Input '{input}' selected.", MessageType.Success);
             }
             catch ( Exception ex )
@@ -711,7 +727,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                     throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6],
                         command);
 
-                Info.IsAudioMuted = muted;
+                Info.AudioMuteState = muted;
                 NotifyObservers(string.Format("Audio mute {0}", ( muted ? "ON" : "OFF" )));
             }
             catch ( Exception ex )
@@ -730,8 +746,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
         {
             try
             {
-                await GetDeviceInfo();
-                return Info.IsAudioMuted;
+                await RefreshState();
+                return Info.AudioMuteState;
             }
             catch ( Exception ex )
             {
@@ -753,16 +769,16 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// <returns>A string containing information about the device and its state.</returns>
         public async Task<string> GetDebugInfo()
         {
-            await GetDeviceInfo();
+            await RefreshAllDeviceInfo();
             string debugInfo = string.Empty;
             debugInfo += $"Device name: {this.Name}\n"
                 + $"Connection info - {ConnectionInfo}\n"
                 + $"Model: {Info.ModelNumber}\n"
                 + $"Serial #: {Info.SerialNumber}\n"
                 + $"Power state: {Info.PowerState}\n"
-                + $"Input selected: {Info.InputSelected}\n";
-            debugInfo += "Video mute: " + ( ( Info.IsDisplayMuted==true ) ? "on" : "off" ) + "\n";
-            debugInfo += "Audio mute: " + ( ( Info.IsAudioMuted==true ) ? "on" : "off" ) + "\n";
+                + $"Input selected: {Info.InputState}\n";
+            debugInfo += "Video mute: " + ( ( Info.DisplayMuteState==true ) ? "on" : "off" ) + "\n";
+            debugInfo += "Audio mute: " + ( ( Info.AudioMuteState==true ) ? "on" : "off" ) + "\n";
 
             if ( Info.LampHoursUsed > -1 && Info.LampHoursTotal > 0 )
             {

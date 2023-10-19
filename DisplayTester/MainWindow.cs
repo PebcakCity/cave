@@ -119,8 +119,8 @@ namespace Cave.DisplayTester
 
         public void OnNext( DeviceInfo status )
         {
-            this.IsDisplayMuted = status.IsDisplayMuted;
-            this.IsAudioMuted = status.IsAudioMuted;
+            this.IsDisplayMuted = status.DisplayMuteState;
+            this.IsAudioMuted = status.AudioMuteState;
             if ( status.Message != null )
                 DisplayMessage(status.Message);
         }

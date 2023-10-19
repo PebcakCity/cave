@@ -26,7 +26,7 @@ namespace Cave.DeviceControllers.Projectors
 
         /* Projector */
         public virtual Task<object?> GetPowerState() { throw new NotImplementedException(); }
-        public virtual Task<object?> GetInputSelection() { throw new NotImplementedException(); }
+        public virtual Task<object?> GetInputState() { throw new NotImplementedException(); }
 
         protected Projector( string deviceName ) : base(deviceName) { }
 

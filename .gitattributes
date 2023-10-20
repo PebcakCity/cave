@@ -1,0 +1,11 @@
+# Normalize line endings in repository
+* text=auto
+
+# Windows scripts in working tree
+*.{cmd,[cC][mM][dD]} text eol=crlf
+*.{ps1,[pP][sS]1} text eol=crlf
+*.{bat,[bB][aA][tT]} text eol=crlf
+
+# Unix scripts in working tree
+*.sh text eol=lf
+

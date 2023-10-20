@@ -250,13 +250,13 @@ namespace Cave.DeviceControllers.Projectors.NEC
 
                     // Try various read methods...
 
-                    //int bytesRead = await Port.BaseStream.ReadAsync(
-                    //    responseBytes.AsMemory(1, expectedLength-1), cts.Token);
+                    int bytesRead = await Port.BaseStream.ReadAsync(
+                        responseBytes.AsMemory(1, expectedLength-1), cts.Token);
 
                     //int bytesRead = await Port.BaseStream.ReadAsync(
                     //    responseBytes, 1, expectedLength-1, cts.Token);
 
-                    int bytesRead = Port.Read(responseBytes, 1, expectedLength-1);
+                    //int bytesRead = Port.Read(responseBytes, 1, expectedLength-1);
 
                     // bytesRead+1 because  we already  read first byte up above
                     Response response = new(responseBytes[0..(bytesRead+1)]);

@@ -26,6 +26,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         private readonly int Baudrate;
 
         private readonly SerialPort Port;
+        private const int MaxReadSize = 256;
 
         private readonly Dictionary<Command, int> SuccessResponseLengths = new()
         {
@@ -70,8 +71,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 (PortName, Baudrate) = (port, baudrate);
                 Port = new(PortName, Baudrate);
-                // Change synchronous read/write timeout
-                Port.ReadTimeout = Port.WriteTimeout = 1000;
+                Port.ReadTimeout = Port.WriteTimeout = 100;
             }
             catch (IOException ex)
             {
@@ -120,7 +120,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             try
             {
                 var timer = Stopwatch.StartNew();
-                byte[] responseBytes = new byte[512];
+                byte[] responseBytes = new byte[MaxReadSize];
 
                 Port.Open();
                 Logger.Debug($"Sending command: {toSend}");
@@ -137,11 +137,6 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 timer.Stop();
                 Logger.Debug($"Took {timer.ElapsedMilliseconds}ms");
                 return response;
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Exception occurred: {ex.Message}");
-                throw;
             }
             finally
             {
@@ -165,7 +160,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
 
                     await Task.Delay(100);
 
-                    byte[] responseBytes = new byte[512];
+                    byte[] responseBytes = new byte[MaxReadSize];
                     cts.CancelAfter(100);
                     int bytesRead = await Port.BaseStream.ReadAsync(
                         responseBytes.AsMemory(0, responseBytes.Length), cts.Token);
@@ -177,10 +172,9 @@ namespace Cave.DeviceControllers.Projectors.NEC
                     Logger.Debug($"Took {timer.ElapsedMilliseconds}ms");
                     return response;
                 }
-                catch(OperationCanceledException oce) 
+                catch(OperationCanceledException) 
                 {
-                    Logger.Error(oce, "Read operation timed out");
-                    throw;
+                    throw new TimeoutException("Operation timed out");
                 }
                 finally
                 {
@@ -204,7 +198,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
          *  each response is supposed to be, whether it's an error or not, and also what an error response starts with
          *  (byte with upper 4 bits 'a', 1010)... we keep two collections of expected response lengths for each command,
          *  one for failure, one for success... SendCommandAsync checks the command being sent, sends it, waits a very
-         *  short amount of time, gets the first byte to know whether it succeeded or not (and how many more bytes to
+         *  short amount of time, gets the firstByte byte to know whether it succeeded or not (and how many more bytes to
          *  get) then sets up a read operation to get the rest and returns it.
          */
         
@@ -212,67 +206,72 @@ namespace Cave.DeviceControllers.Projectors.NEC
         {
             using ( var cts = new CancellationTokenSource() )
             {
+                int firstByte = 0;
+                byte [] responseBytes;
                 try
                 {
-                    var timer = Stopwatch.StartNew();
                     Port.Open();
 
                     Logger.Debug($"Sending command: {command}");
                     byte[] cmdBytes = command.Data.ToArray();
                     Port.Write(cmdBytes, 0, cmdBytes.Length);
 
-                    // (Optional?)  delay  before  beginning  read.
+                    // Delay  before  beginning  read.  Lowering this is not
+                    // advised, seems to make read errors more frequent.
                     await Task.Delay(100);
 
-                    //Read first byte & check to see if it indicates success or
-                    //failure of the command
-
-                    int first = Port.ReadByte();
-                    if ( first == -1 )
+                    // Get first byte.  -1 indicates the end of the stream.
+                    firstByte = Port.ReadByte();
+                    if ( firstByte == -1 )
                         throw new EndOfStreamException("Unexpected end of stream");
 
-                    Logger.Debug($"First byte: 0x{first:x2}");
+                    // Get length of expected response based on whether first
+                    // byte indicates command success or failure
+                    //int expectedLength = ((firstByte>>4)==0x0a) ?
+                    //    FailureResponseLengths[command] :
+                    //    SuccessResponseLengths[command];
 
-                    int expectedLength = ((first>>4)==0x0a) ?
-                        FailureResponseLengths[command] :
-                        SuccessResponseLengths[command];
+                    // Check for possible data corruption 
+                    int expectedLength = (firstByte >> 4) switch
+                    {
+                        0x0a => FailureResponseLengths[command],
+                        0x02 => SuccessResponseLengths[command],
+                        _ => throw new InvalidDataException("Bad response from device")
+                    };
 
-                    // Add first retrieved byte
-                    byte[] responseBytes = new byte[expectedLength];
-                    responseBytes[0] = (byte)first;
+                    // Add first retrieved byte to response
+                    responseBytes = new byte[expectedLength];
+                    responseBytes[0] = (byte)firstByte;
 
-                    // Because  we now know how long  our response should be, we
-                    // can increase  the timeout as  high as we  want to  ensure
-                    // stable read results  while  knowing most read  operations
-                    // will not take this long.      (Theoretically... stability
-                    // seems to have more to do with the delay introduced above)
+                    // Get the rest
                     cts.CancelAfter(100);
-
-                    // Try various read methods...
-
                     int bytesRead = await Port.BaseStream.ReadAsync(
                         responseBytes.AsMemory(1, expectedLength-1), cts.Token);
 
-                    //int bytesRead = await Port.BaseStream.ReadAsync(
-                    //    responseBytes, 1, expectedLength-1, cts.Token);
-
-                    //int bytesRead = Port.Read(responseBytes, 1, expectedLength-1);
-
-                    // bytesRead+1 because  we already  read first byte up above
+                    // bytesRead+1 because we already read first byte
                     Response response = new(responseBytes[0..(bytesRead+1)]);
                     Logger.Debug($"Response: {response}");
-                    timer.Stop();
-                    Logger.Debug($"Took {timer.ElapsedMilliseconds}ms");
                     return response;
                 }
-                catch ( OperationCanceledException oc )
+                catch ( OperationCanceledException )
                 {
-                    Logger.Error(oc, "Read operation timed out");
+                    throw new TimeoutException("Read operation timed out") { 
+                        Data = { { "Command", command.Name } }
+                    };
+                }
+                catch ( TimeoutException te )
+                {
+                    te.Data.Add("Command", command.Name);
                     throw;
                 }
-                catch ( EndOfStreamException eos )
+                catch ( InvalidDataException ide )
                 {
-                    Logger.Error(eos);
+                    responseBytes = new byte[MaxReadSize];
+                    responseBytes[0] = (byte)firstByte;
+                    int bytesRead = Port.Read(responseBytes, 1, responseBytes.Length-1);
+                    Response junkResponse = new(responseBytes[0..(bytesRead+1)]);
+                    ide.Data.Add("Command", command.Name);
+                    ide.Data.Add("Response", junkResponse.ToString());
                     throw;
                 }
                 finally

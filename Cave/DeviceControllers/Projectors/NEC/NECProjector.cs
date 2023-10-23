@@ -109,7 +109,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// <see cref="CallerMemberNameAttribute"/></param>
         private void HandleException(Exception ex, [CallerMemberName] string? methodExOccurredIn = null)
         {
-            Logger.Error($"{methodExOccurredIn} :: {ex}");
+            Logger.Error(ex, methodExOccurredIn);
             foreach ( var observer in Observers )
                 observer.OnError(ex);
         }
@@ -158,7 +158,9 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
             catch ( Exception ex )
             {
-                HandleException(ex);
+                // Trying to clean up exception logging so it's not logging every exception 3 times.
+                // If this works well, this entire try block can be taken out
+                //HandleException(ex);
                 throw;
             }
         }
@@ -223,7 +225,9 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
             catch( Exception ex )
             {
-                HandleException(ex);
+                // Trying to clean up exception logging so it's not logging every exception 3 times.
+                // If this works well, this catch block can be taken out
+                //HandleException(ex);
                 throw;
             }
         }
@@ -284,7 +288,9 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
             catch ( Exception ex )
             {
-                HandleException(ex);
+                // Trying to clean up exception logging so it's not logging every exception 3 times.
+                // If this works well, this entire try block can be taken out
+                //HandleException(ex);
                 throw;
             }
         }
@@ -311,7 +317,9 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
             catch ( Exception ex )
             {
-                HandleException(ex);
+                // Trying to clean up exception logging so it's not logging every exception 3 times.
+                // If this works well, this entire try block can be taken out
+                //HandleException(ex);
                 throw;
             }
         }
@@ -339,7 +347,9 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
             catch ( Exception ex )
             {
-                HandleException(ex);
+                // Trying to clean up exception logging so it's not logging every exception 3 times.
+                // If this works well, this entire try block can be taken out
+                //HandleException(ex);
                 throw;
             }
         }
@@ -445,7 +455,9 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
             catch ( Exception ex )
             {
-                HandleException(ex);
+                // Trying to clean up exception logging so it's not logging every exception 3 times.
+                // If this works well, this entire try block can be taken out
+                //HandleException(ex);
                 throw;
             }
         }
@@ -463,7 +475,9 @@ namespace Cave.DeviceControllers.Projectors.NEC
             }
             catch ( Exception ex )
             {
-                HandleException(ex);
+                // Trying to clean up exception logging so it's not logging every exception 3 times.
+                // If this works well, this entire try block can be taken out
+                //HandleException(ex);
                 throw;
             }
         }

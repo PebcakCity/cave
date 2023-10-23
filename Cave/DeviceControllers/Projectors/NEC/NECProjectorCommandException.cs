@@ -38,6 +38,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         private readonly string _message;
 
         public override string Message { get => _message; }
+        public override string? StackTrace { get => null; }
 
         /// <summary>
         /// Default parameterless constructor

@@ -137,7 +137,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 int bytesRead = await socket.ReceiveAsync(junk, SocketFlags.None, cts.Token);
                 responseData[0] = firstByte[0];
                 junk.CopyTo(responseData, 1);
-                Response junkResponse = new(junk[0..(bytesRead+1)]);
+                Response junkResponse = new(responseData[0..(bytesRead+1)]);
                 ide.Data.Add("Command", command.Name);
                 ide.Data.Add("Response", junkResponse.ToString());
                 throw;

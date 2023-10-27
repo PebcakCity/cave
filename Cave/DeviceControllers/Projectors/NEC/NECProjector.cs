@@ -140,7 +140,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             try
             {
                 var response = await Client!.SendCommandAsync(Command.GetStatus);
-                if ( response.IndicatesFailure )
+                if ( response.IndicatesCommandFailure )
                     throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6],
                         Command.GetStatus);
 
@@ -200,7 +200,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             try
             {
                 var response = await Client!.SendCommandAsync(Command.GetLampInfo.Prepare(0x00, (byte)lampInfo));
-                if ( response.IndicatesFailure )
+                if ( response.IndicatesCommandFailure )
                     throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6],
                         Command.GetLampInfo);
 
@@ -277,7 +277,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 fires off only two requests to the projector - GetStatus and GetLampInfo(UsageTimeSeconds) - because
                 these are the only data likely to change during projector usage.
                 */
-                if ( response.Matches(Response.GetModelInfoSuccess) )
+                if ( response.Matches(Response.GetModelNumberSuccess) )
                 {
                     var data = response.Data[5..37];
                     Info.ModelNumber = Encoding.UTF8.GetString(data).TrimEnd('\0');
@@ -306,7 +306,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 // Will error out depending on order of plugging everything in.  See GetModelNumber above
                 var response = await Client!.SendCommandAsync(Command.GetSerialNumber);
-                if ( response.Matches(Response.GetSerialInfoSuccess) )
+                if ( response.Matches(Response.GetSerialNumberSuccess) )
                 {
                     var data = response.Data[7..23];
                     Info.SerialNumber = Encoding.UTF8.GetString(data).TrimEnd('\0');
@@ -385,7 +385,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             try
             {
                 var response = await Client!.SendCommandAsync(Command.PowerOn);
-                if ( response.IndicatesFailure )
+                if ( response.IndicatesCommandFailure )
                     throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6],
                         Command.PowerOn);
 
@@ -524,7 +524,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             try
             {
                 var response = await Client!.SendCommandAsync(Command.PowerOff);
-                if ( response.IndicatesFailure )
+                if ( response.IndicatesCommandFailure )
                     throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6],
                         Command.PowerOff);
             }
@@ -554,7 +554,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 Command command = muted ? Command.VideoMuteOn : Command.VideoMuteOff;
                 var response = await Client!.SendCommandAsync(command);
-                if ( response.IndicatesFailure )
+                if ( response.IndicatesCommandFailure )
                     throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6],
                         command);
 
@@ -619,7 +619,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
 
                 var response = await Client!.SendCommandAsync(Command.SelectInput.Prepare(input));
 
-                if ( response.IndicatesFailure )
+                if ( response.IndicatesCommandFailure )
                     throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6],
                         Command.SelectInput);
 
@@ -682,7 +682,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {   
                 // relative adjustment, +2
                 var response = await Client!.SendCommandAsync(Command.VolumeAdjust.Prepare(0x01, 0x02, 0x00));
-                if ( response.IndicatesFailure )
+                if ( response.IndicatesCommandFailure )
                     throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6],
                         Command.VolumeAdjust);
 
@@ -708,7 +708,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 // relative adjustment, -2
                 var response = await Client!.SendCommandAsync(Command.VolumeAdjust.Prepare(0x01, 0xfe, 0xff));
-                if ( response.IndicatesFailure )
+                if ( response.IndicatesCommandFailure )
                     throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6],
                         Command.VolumeAdjust);
 
@@ -736,7 +736,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
             {
                 Command command = muted ? Command.AudioMuteOn : Command.AudioMuteOff;
                 var response = await Client!.SendCommandAsync(command);
-                if ( response.IndicatesFailure )
+                if ( response.IndicatesCommandFailure )
                     throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6],
                         command);
 

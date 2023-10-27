@@ -267,7 +267,7 @@ namespace Cave.DisplayTester
             }
             catch (Exception ex)
             {
-                Logger.Error(ex);
+                OnError(ex);
             }
         }
 

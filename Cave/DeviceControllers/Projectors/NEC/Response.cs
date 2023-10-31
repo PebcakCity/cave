@@ -22,10 +22,10 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /* ------------------------------------------Success responses----------------------------------------------- */
 
 
-        internal static readonly Response PowerOnSuccess = new( new byte[] { 0x22, 0x00, wild, wild, 0x00, wild }, nameof(PowerOnSuccess) );
-        internal static readonly Response PowerOffSuccess = new( new byte[] { 0x22, 0x01, wild, wild, 0x00, wild }, nameof(PowerOffSuccess) );
-        internal static readonly Response SelectInputSuccess = new( new byte[] { 0x22, 0x03, wild, wild, 0x01, wild, wild }, nameof(SelectInputSuccess) );
-        internal static readonly Response GetStatusSuccess = new( new byte[] { 0x20, 0xbf, wild, wild, 0x10, 0x02, 
+        public static readonly Response PowerOnSuccess = new( new byte[] { 0x22, 0x00, wild, wild, 0x00, wild }, nameof(PowerOnSuccess) );
+        public static readonly Response PowerOffSuccess = new( new byte[] { 0x22, 0x01, wild, wild, 0x00, wild }, nameof(PowerOffSuccess) );
+        public static readonly Response SelectInputSuccess = new( new byte[] { 0x22, 0x03, wild, wild, 0x01, wild, wild }, nameof(SelectInputSuccess) );
+        public static readonly Response GetStatusSuccess = new( new byte[] { 0x20, 0xbf, wild, wild, 0x10, 0x02, 
         /*  Power       Content displayed       Input selected (tuple)      Video signal type */
             wild,       wild,                   wild, wild,                 wild,
         /*  Video mute  Sound mute      Onscreen mute   Freeze status   System reserved */
@@ -33,7 +33,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /*  Checksum */    
             wild }, nameof(GetStatusSuccess) );
 
-        internal static readonly Response GetInfoSuccess = new( new byte[] { 0x23, 0x8a, wild, wild, 0x62, 
+        public static readonly Response GetInfoSuccess = new( new byte[] { 0x23, 0x8a, wild, wild, 0x62, 
         /* 98 bytes of data ... */
             wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild,
             wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild,
@@ -44,11 +44,11 @@ namespace Cave.DeviceControllers.Projectors.NEC
             wild,
         }, nameof(GetInfoSuccess) );
 
-        internal static readonly Response GetLampInfoSuccess = new( new byte[] { 0x23, 0x96, wild, wild, 0x06,
+        public static readonly Response GetLampInfoSuccess = new( new byte[] { 0x23, 0x96, wild, wild, 0x06,
         /*  Lamp#       What was requested      32-bit int data             Checksum */
             wild,       wild,                   wild, wild, wild, wild,     wild }, nameof(GetLampInfoSuccess) );
 
-        internal static readonly Response GetErrorsSuccess = new( new byte[] { 0x20, 0x88, wild, wild, 0x0c,
+        public static readonly Response GetErrorsSuccess = new( new byte[] { 0x20, 0x88, wild, wild, 0x0c,
         /*  Data 1 - 4 error flags */
             wild, wild, wild, wild, 
         /*  Data 5 - 8 reserved for system */
@@ -60,37 +60,37 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /*  Checksum */
             wild }, nameof(GetErrorsSuccess) );
 
-        internal static readonly Response GetModelNumberSuccess = new( new byte[] { 0x20, 0x85, wild, wild, 0x20, 
+        public static readonly Response GetModelNumberSuccess = new( new byte[] { 0x20, 0x85, wild, wild, 0x20, 
         /*  32 bytes of data */
             wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild,
             wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild,
         /*  Checksum */
             wild }, nameof(GetModelNumberSuccess) );
 
-        internal static readonly Response GetSerialNumberSuccess = new( new byte[] { 0x20, 0xbf, wild, wild, 0x12, 0x01, 0x06,
+        public static readonly Response GetSerialNumberSuccess = new( new byte[] { 0x20, 0xbf, wild, wild, 0x12, 0x01, 0x06,
         /*  16 bytes of data */
             wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild, wild,
         /*  Checksum */
             wild }, nameof(GetSerialNumberSuccess) );
 
-        internal static readonly Response VideoMuteOnSuccess = new( new byte[] { 0x22, 0x10, wild, wild, 0x00, wild }, nameof(VideoMuteOnSuccess) );
-        internal static readonly Response VideoMuteOffSuccess = new( new byte[] { 0x22, 0x11, wild, wild, 0x00, wild }, nameof(VideoMuteOffSuccess) );
-        internal static readonly Response AudioMuteOnSuccess = new( new byte[] { 0x22, 0x12, wild, wild, 0x00, wild }, nameof(AudioMuteOnSuccess) );
-        internal static readonly Response AudioMuteOffSuccess = new( new byte[] { 0x22, 0x13, wild, wild, 0x00, wild }, nameof(AudioMuteOffSuccess) );
-        internal static readonly Response VolumeAdjustSuccess = new( new byte[] { 0x23, 0x10, wild, wild, 0x02, wild, wild, wild }, nameof(VolumeAdjustSuccess) );
+        public static readonly Response VideoMuteOnSuccess = new( new byte[] { 0x22, 0x10, wild, wild, 0x00, wild }, nameof(VideoMuteOnSuccess) );
+        public static readonly Response VideoMuteOffSuccess = new( new byte[] { 0x22, 0x11, wild, wild, 0x00, wild }, nameof(VideoMuteOffSuccess) );
+        public static readonly Response AudioMuteOnSuccess = new( new byte[] { 0x22, 0x12, wild, wild, 0x00, wild }, nameof(AudioMuteOnSuccess) );
+        public static readonly Response AudioMuteOffSuccess = new( new byte[] { 0x22, 0x13, wild, wild, 0x00, wild }, nameof(AudioMuteOffSuccess) );
+        public static readonly Response VolumeAdjustSuccess = new( new byte[] { 0x23, 0x10, wild, wild, 0x02, wild, wild, wild }, nameof(VolumeAdjustSuccess) );
 
 
         /* -----------------------------------------Failure responses------------------------------------------------ */
 
-        
-        internal static readonly Response PowerOnFailure = new( new byte[] { 0xa2, 0x00, wild, wild, 0x02, wild, wild, wild }, nameof(PowerOnFailure) );
-        internal static readonly Response PowerOffFailure = new( new byte[] { 0xa2, 0x01, wild, wild, 0x02, wild, wild, wild }, nameof(PowerOffFailure) );
-        internal static readonly Response SelectInputFailure = new( new byte[] { 0xa2, 0x03, wild, wild, 0x02, wild, wild, wild }, nameof(SelectInputFailure) );
-        internal static readonly Response GetStatusFailure = new( new byte[] { 0xa0, 0xbf, wild, wild, 0x02, wild, wild, wild }, nameof(GetStatusFailure) );
-        internal static readonly Response GetInfoFailure = new( new byte[] { 0xa3, 0x8a, wild, wild, 0x02, wild, wild, wild }, nameof(GetInfoFailure) );
-        internal static readonly Response GetLampInfoFailure = new( new byte[] { 0xa3, 0x96, wild, wild, 0x02, wild, wild, wild }, nameof(GetLampInfoFailure) );
-        internal static readonly Response GetErrorsFailure = new( new byte[] { 0xa0, 0x88, wild, wild, 0x02, wild, wild, wild }, nameof(GetErrorsFailure) );
-        internal static readonly Response GetModelNumberFailure = new( new byte[] { 0xa0, 0x85, wild, wild, 0x02, wild, wild, wild }, nameof(GetModelNumberFailure) );
+
+        public static readonly Response PowerOnFailure = new( new byte[] { 0xa2, 0x00, wild, wild, 0x02, wild, wild, wild }, nameof(PowerOnFailure) );
+        public static readonly Response PowerOffFailure = new( new byte[] { 0xa2, 0x01, wild, wild, 0x02, wild, wild, wild }, nameof(PowerOffFailure) );
+        public static readonly Response SelectInputFailure = new( new byte[] { 0xa2, 0x03, wild, wild, 0x02, wild, wild, wild }, nameof(SelectInputFailure) );
+        public static readonly Response GetStatusFailure = new( new byte[] { 0xa0, 0xbf, wild, wild, 0x02, wild, wild, wild }, nameof(GetStatusFailure) );
+        public static readonly Response GetInfoFailure = new( new byte[] { 0xa3, 0x8a, wild, wild, 0x02, wild, wild, wild }, nameof(GetInfoFailure) );
+        public static readonly Response GetLampInfoFailure = new( new byte[] { 0xa3, 0x96, wild, wild, 0x02, wild, wild, wild }, nameof(GetLampInfoFailure) );
+        public static readonly Response GetErrorsFailure = new( new byte[] { 0xa0, 0x88, wild, wild, 0x02, wild, wild, wild }, nameof(GetErrorsFailure) );
+        public static readonly Response GetModelNumberFailure = new( new byte[] { 0xa0, 0x85, wild, wild, 0x02, wild, wild, wild }, nameof(GetModelNumberFailure) );
 
         /* 
          * The failure response returned by the GetSerialNumber command is basically identical to that of GetStatus, so
@@ -98,12 +98,12 @@ namespace Cave.DeviceControllers.Projectors.NEC
          * I have never seen an actual failure to get current status, but GetSerialNumber fails every time the device
          * has not been power cycled since being plugged in?)
          */
-        internal static readonly Response GetSerialNumberFailure = new( new byte[] { 0xa0, 0xbf, wild, wild, 0x02, wild, wild, wild }, nameof(GetSerialNumberFailure) );
-        internal static readonly Response VideoMuteOnFailure = new( new byte[] { 0xa2, 0x10, wild, wild, 0x02, wild, wild, wild }, nameof(VideoMuteOnFailure) );
-        internal static readonly Response VideoMuteOffFailure = new( new byte[] { 0xa2, 0x11, wild, wild, 0x02, wild, wild, wild }, nameof(VideoMuteOffFailure) );
-        internal static readonly Response AudioMuteOnFailure = new( new byte[] { 0xa2, 0x12, wild, wild, 0x02, wild, wild, wild }, nameof(AudioMuteOnFailure) );
-        internal static readonly Response AudioMuteOffFailure = new( new byte[] { 0xa2, 0x13, wild, wild, 0x02, wild, wild, wild }, nameof(AudioMuteOffFailure) );
-        internal static readonly Response VolumeAdjustFailure = new( new byte[] { 0xa3, 0x10, wild, wild, 0x02, wild, wild, wild }, nameof(VolumeAdjustFailure) );
+        public static readonly Response GetSerialNumberFailure = new( new byte[] { 0xa0, 0xbf, wild, wild, 0x02, wild, wild, wild }, nameof(GetSerialNumberFailure) );
+        public static readonly Response VideoMuteOnFailure = new( new byte[] { 0xa2, 0x10, wild, wild, 0x02, wild, wild, wild }, nameof(VideoMuteOnFailure) );
+        public static readonly Response VideoMuteOffFailure = new( new byte[] { 0xa2, 0x11, wild, wild, 0x02, wild, wild, wild }, nameof(VideoMuteOffFailure) );
+        public static readonly Response AudioMuteOnFailure = new( new byte[] { 0xa2, 0x12, wild, wild, 0x02, wild, wild, wild }, nameof(AudioMuteOnFailure) );
+        public static readonly Response AudioMuteOffFailure = new( new byte[] { 0xa2, 0x13, wild, wild, 0x02, wild, wild, wild }, nameof(AudioMuteOffFailure) );
+        public static readonly Response VolumeAdjustFailure = new( new byte[] { 0xa3, 0x10, wild, wild, 0x02, wild, wild, wild }, nameof(VolumeAdjustFailure) );
 
         /// <summary>
         /// Constructs a new <see cref="Response"/> with the given <see cref="Data">Data</see> array and
@@ -160,11 +160,11 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// <returns>True if the two arrays match for all non-wildcard bytes.  False otherwise.</returns>
         internal bool Matches( byte[] other )
         {
-            if( this.Data.Length != other.Length )
+            if ( this.Data.Length != other.Length )
                 return false;
-            for( int idx = 0; idx < this.Data.Length; ++idx )
+            for ( int idx = 0; idx < this.Data.Length; ++idx )
             {
-                if(
+                if (
                     this.Data[idx] != other[idx] &&
                     this.Data[idx] != wild &&
                     other[idx] != wild

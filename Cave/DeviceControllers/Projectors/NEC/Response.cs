@@ -164,10 +164,12 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 return false;
             for ( int idx = 0; idx < this.Data.Length; ++idx )
             {
-                if (
-                    this.Data[idx] != other[idx] &&
+                // Comparing other[idx] != wild first allows short-circuiting the other 2 tests when comparing long
+                // responses, ex. "if response.Matches(Response.GetInfoSuccess)", etc.  Vast majority of the response's
+                // bytes ARE wildcard.  Looks slightly less intuitive this way, maybe saves a couple nanoseconds?
+                if ( other[idx] != wild &&
                     this.Data[idx] != wild &&
-                    other[idx] != wild
+                    this.Data[idx] != other[idx]
                 )
                 {
                     return false;

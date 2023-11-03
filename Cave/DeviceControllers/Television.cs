@@ -1,6 +1,6 @@
 using Cave.Interfaces;
 
-namespace Cave.DeviceControllers.Televisions
+namespace Cave.DeviceControllers
 {
     public abstract class Television : Device, IDisplayInputSelectable, IAudio
     {
@@ -9,15 +9,15 @@ namespace Cave.DeviceControllers.Televisions
         public virtual Task DisplayPowerOff() { throw new NotImplementedException(); }
 
         /* IInputSelectable */
-        public virtual Task SelectInput( object obj ) { throw new NotImplementedException(); }
+        public virtual Task SelectInput(object obj) { throw new NotImplementedException(); }
 
         /* IDisplayInputSelectable */
-        public virtual Task PowerOnSelectInput( object obj ) { throw new NotImplementedException(); }
+        public virtual Task PowerOnSelectInput(object obj) { throw new NotImplementedException(); }
 
         /* IAudio */
         public virtual Task AudioVolumeUp() { throw new NotImplementedException(); }
         public virtual Task AudioVolumeDown() { throw new NotImplementedException(); }
-        public virtual Task AudioMute( bool muted ) { throw new NotImplementedException(); }
+        public virtual Task AudioMuteToggle() { throw new NotImplementedException(); }
         public virtual Task<bool> IsAudioMuted() { throw new NotImplementedException(); }
 
         /* Television */

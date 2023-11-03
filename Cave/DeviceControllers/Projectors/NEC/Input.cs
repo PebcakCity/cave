@@ -2,7 +2,8 @@ using Ardalis.SmartEnum;
 
 namespace Cave.DeviceControllers.Projectors.NEC
 {
-    /* Input-related fields */
+    /* Input-related fields.  (Consider moving this dictionary to Input and
+     * setting as internal) */
     public partial class NECProjector : Projector
     {
         /// <summary>
@@ -30,12 +31,13 @@ namespace Cave.DeviceControllers.Projectors.NEC
             { (0x02, 0x28), Input.SDI },        /*SDI 2*/
             { (0x03, 0x28), Input.SDI },        /*SDI 3*/
             { (0x04, 0x28), Input.SDI },        /*SDI 4*/
-            { (0x01, 0x07), Input.Other },      /*Viewer*/
-            { (0x02, 0x07), Input.Other },      /*LAN*/
+            { (0x02, 0x07), Input.Network },
+            { (0x01, 0x07), Input.Other },      /*USB-A/Viewer*/
             { (0x03, 0x06), Input.Other },      /*SLOT*/
-            { (0x04, 0x07), Input.Other },      /*Viewer*/
+            { (0x04, 0x07), Input.Other },      /*USB-B/USB display/Viewer*/
             { (0x05, 0x07), Input.Other },      /*APPS*/
-            { (0x01, 0x23), Input.Other }       /*SLOT*/
+            { (0x01, 0x23), Input.Other },      /*SLOT*/
+            { (0xff, 0xff), Input.Error }
         };
     }
 
@@ -53,16 +55,13 @@ namespace Cave.DeviceControllers.Projectors.NEC
         public static readonly Input HDBaseT = new( 0xbf, nameof(HDBaseT) );
         public static readonly Input HDBaseTAlternate = new( 0x20, nameof(HDBaseTAlternate) );
         public static readonly Input SDI = new( 0xc4, nameof(SDI) );
-
-        /* Have decided to support selecting the LAN/Network input. We have some classrooms where they are using NEC
-         * MultiPresenter software to display over the network and I gotta admit it's pretty slick and I'd kinda like
-         * to see that in more places.  It can seamlessly switch between PC, Mac, iOS, or Android devices with no
-         * cables required except ethernet to the projector.  Plus, with the projectors networked already for control
-         * it just makes sense. */
         public static readonly Input Network = new( 0x20, nameof(Network) );
 
-        /* "Other" will still switch to the USB input. */
+        // "Other" selects the USB-A input
         public static readonly Input Other = new( 0x1f, nameof(Other) );
+
+        // Only here for InputState matching.  Devices in a state of error report input tuple as (0xff, 0xff)
+        internal static readonly Input Error = new( 0xff, nameof(Error) );
 
         public Input( int value, string name ): base(name, value){}
 

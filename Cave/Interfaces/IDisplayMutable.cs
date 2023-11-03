@@ -2,7 +2,7 @@
 {
     public interface IDisplayMutable : IDisplay
     {
-        Task DisplayMute(bool muted);
+        Task DisplayMuteToggle();
         Task<bool> IsDisplayMuted();
     }
 }

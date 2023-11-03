@@ -137,31 +137,21 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// </summary>
         private async Task RefreshState()
         {
-            try
-            {
-                var response = await Client!.SendCommandAsync(Command.GetStatus);
-                if ( response.IndicatesCommandFailure )
-                    throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6],
-                        Command.GetStatus);
+            var response = await Client!.SendCommandAsync(Command.GetStatus);
+            if ( response.IndicatesCommandFailure )
+                throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6],
+                    Command.GetStatus);
 
-                Info.PowerState = PowerState.FromValue(response.Data[6]);
-                Logger.Debug($"Device power state: {Info.PowerState}");
-                var inputTuple = (response.Data[8], response.Data[9]);
-                Info.InputState = InputStates.GetValueOrDefault(inputTuple);
-                Info.DisplayMuteState = (response.Data[11] == 0x01);
-                Info.AudioMuteState = (response.Data[12] == 0x01);
-                // Get lamp hours if device has a lamp
-                await GetLampInfo(LampInfo.UsageTimeSeconds);
+            Info.PowerState = PowerState.FromValue(response.Data[6]);
+            Logger.Debug($"Device power state: {Info.PowerState}");
+            var inputTuple = (response.Data[8], response.Data[9]);
+            Info.InputState = InputStates.GetValueOrDefault(inputTuple);
+            Info.DisplayMuteState = (response.Data[11] == 0x01);
+            Info.AudioMuteState = (response.Data[12] == 0x01);
+            // Get lamp hours if device has a lamp
+            await GetLampInfo(LampInfo.UsageTimeSeconds);
 
-                NotifyObservers();
-            }
-            catch ( Exception ex )
-            {
-                // Trying to clean up exception logging so it's not logging every exception 3 times.
-                // If this works well, this entire try block can be taken out
-                //HandleException(ex);
-                throw;
-            }
+            NotifyObservers();
         }
 
 
@@ -194,7 +184,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// <param name="lampInfo"><see cref="LampInfo"/> member corresponding
         /// to the requested data</param>
         /// <returns>The exact value reported by the device as an
-        /// <see cref="int"/></returns>
+        /// <see cref="int"/> or -1 if no lamp data is available.</returns>
         private async Task<int> GetLampInfo(LampInfo lampInfo)
         {
             try
@@ -222,13 +212,6 @@ namespace Cave.DeviceControllers.Projectors.NEC
                 Logger.Warn(npce);
                 return -1;
             }
-            catch( Exception ex )
-            {
-                // Trying to clean up exception logging so it's not logging every exception 3 times.
-                // If this works well, this catch block can be taken out
-                //HandleException(ex);
-                throw;
-            }
         }
 
         /// <summary>
@@ -239,59 +222,14 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// <returns>The model number as a string.</returns>
         private async Task<string> GetModelNumber()
         {
-            try
+            var response = await Client!.SendCommandAsync(Command.GetModelNumber);
+            if ( response.Matches(Response.GetModelNumberSuccess) )
             {
-                var response = await Client!.SendCommandAsync(Command.GetModelNumber);
-
-                /* For some reason on certain models, the GetModelNumber command will fail to execute over a serial
-                port after plugging the projector into a power source before actually powering it on.  You get a
-                "The command cannot be recognized" error.  When you see this failure, try powering the device on first.
-                Then you can power it back off if you want and all commands will execute normally.  The only model I
-                have that this seems to affect is the M322X.  It might affect other models, who knows?
-
-                This also affects the GetSerialNumber and GetErrors commands.  Neither will execute over a serial port
-                without power cycling the device.  What's even odder is that GetModelNumber and GetErrors will happily
-                work over TCP without the power cycle, but GetSerialNumber refuses over either RS232 or TCP.
-
-                Anyway instead of throwing an exception here on command failure, we just return null if the response
-                was not the one we were expecting.  This is so that Initialize() does not choke and can continue to
-                execute the commands that seem unaffected by this issue, such as GetLampInfo.
-
-                So depending on whether any other models are affected by this, seeing a projector in your UI whose model
-                and serial info are reported null could indicate that you need to power cycle that machine.
-
-                This kindof matches with what NaViset Administrator says - that a device has to be power cycled as part
-                of a "full refresh" in order to get some of its information.  Just strange that on some models that
-                unavailable information includes the model/serial number and on others it doesn't?
-
-                This could be an issue for long-running applications like a classroom control system.  If the whole
-                system loses and regains power, the projector will need to actually be powercycled before the control
-                system will be able to successfully read the serial number (or model/error information if connected via
-                RS232).  If we only read that information when the application first starts up, it will never get set.
-                We'd have to manually restart the application _after_ power cycling the connected projector.  So I think
-                we might need at least refactor so that model/serial/error information is checked periodically after
-                application startup.  Either manually (as part of the GetDebugInfo() routine) or during a method that is
-                called periodically to refresh device status (like GetDeviceInfo()).  I'd rather not add a bunch of
-                extra calls to every GetDeviceInfo() call.  This gets called every second during AwaitPowerOn() to
-                check if the device is ready to accept input switching commands... GetDeviceInfo() currently by design
-                fires off only two requests to the projector - GetStatus and GetLampInfo(UsageTimeSeconds) - because
-                these are the only data likely to change during projector usage.
-                */
-                if ( response.Matches(Response.GetModelNumberSuccess) )
-                {
-                    var data = response.Data[5..37];
-                    Info.ModelNumber = Encoding.UTF8.GetString(data).TrimEnd('\0');
-                    return Info.ModelNumber;
-                }
-                return null!;
+                var data = response.Data[5..37];
+                Info.ModelNumber = Encoding.UTF8.GetString(data).TrimEnd('\0');
+                return Info.ModelNumber;
             }
-            catch ( Exception ex )
-            {
-                // Trying to clean up exception logging so it's not logging every exception 3 times.
-                // If this works well, this entire try block can be taken out
-                //HandleException(ex);
-                throw;
-            }
+            return null!;
         }
 
         /// <summary>
@@ -302,25 +240,14 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// <returns>The serial number as a string.</returns>
         private async Task<string> GetSerialNumber()
         {
-            try
+            var response = await Client!.SendCommandAsync(Command.GetSerialNumber);
+            if ( response.Matches(Response.GetSerialNumberSuccess) )
             {
-                // Will error out depending on order of plugging everything in.  See GetModelNumber above
-                var response = await Client!.SendCommandAsync(Command.GetSerialNumber);
-                if ( response.Matches(Response.GetSerialNumberSuccess) )
-                {
-                    var data = response.Data[7..23];
-                    Info.SerialNumber = Encoding.UTF8.GetString(data).TrimEnd('\0');
-                    return Info.SerialNumber;
-                }
-                return null!;
+                var data = response.Data[7..23];
+                Info.SerialNumber = Encoding.UTF8.GetString(data).TrimEnd('\0');
+                return Info.SerialNumber;
             }
-            catch ( Exception ex )
-            {
-                // Trying to clean up exception logging so it's not logging every exception 3 times.
-                // If this works well, this entire try block can be taken out
-                //HandleException(ex);
-                throw;
-            }
+            return null!;
         }
 
         /// <summary>
@@ -332,25 +259,15 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// <returns>The list of <see cref="NECProjectorException"/>instances reported.</returns>
         private async Task<List<NECProjectorException>> GetErrors( bool logErrors = true )
         {
-            try
+            var response = await Client!.SendCommandAsync(Command.GetErrors);
+            var errors = NECProjectorException.GetErrorsFromResponse(response);
+            if ( errors.Count > 0 && logErrors )
             {
-                var response = await Client!.SendCommandAsync(Command.GetErrors);
-                var errors = NECProjectorException.GetErrorsFromResponse(response);
-                if ( errors.Count > 0 && logErrors )
-                {
-                    Logger.Warn("Device is reporting the following internal error(s):");
-                    foreach ( var error in errors )
-                        Logger.Warn(error.Message);
-                }
-                return errors;
+                Logger.Warn("Device is reporting the following internal error(s):");
+                foreach ( var error in errors )
+                    Logger.Warn(error.Message);
             }
-            catch ( Exception ex )
-            {
-                // Trying to clean up exception logging so it's not logging every exception 3 times.
-                // If this works well, this entire try block can be taken out
-                //HandleException(ex);
-                throw;
-            }
+            return errors;
         }
 
         /// <summary>
@@ -447,18 +364,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// <returns>The <see cref="PowerState"/>.</returns>
         public override async Task<object?> GetPowerState()
         {
-            try
-            {
-                await RefreshState();
-                return Info.PowerState;
-            }
-            catch ( Exception ex )
-            {
-                // Trying to clean up exception logging so it's not logging every exception 3 times.
-                // If this works well, this entire try block can be taken out
-                //HandleException(ex);
-                throw;
-            }
+            await RefreshState();
+            return Info.PowerState;
         }
 
         /// <summary>
@@ -467,18 +374,8 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// <returns>The selected <see cref="Input"/>.</returns>
         public override async Task<object?> GetInputState()
         {
-            try
-            {
-                await RefreshState();
-                return Info.InputState;
-            }
-            catch ( Exception ex )
-            {
-                // Trying to clean up exception logging so it's not logging every exception 3 times.
-                // If this works well, this entire try block can be taken out
-                //HandleException(ex);
-                throw;
-            }
+            await RefreshState();
+            return Info.InputState;
         }
 
 
@@ -540,26 +437,23 @@ namespace Cave.DeviceControllers.Projectors.NEC
         #region interface IDisplayMutable
 
         /// <summary>
-        /// Implements <see cref="IDisplayMutable.DisplayMute"/>.
-        /// Tries to set the display muting state of the device to on or off
-        /// according to the value of <paramref name="muted"/>.
+        /// Implements <see cref="IDisplayMutable.DisplayMuteToggle"/>.
+        /// Tries to toggle the display muting state of the device.
         /// </summary>
-        /// <param name="muted">True to mute the display, false to unmute it.</param>
         /// <exception cref="NECProjectorCommandException">Thrown if the device
         /// fails to execute the command, such as when the device is in a
         /// state which prevents execution of that command.</exception>
-        public override async Task DisplayMute( bool muted )
+        public override async Task DisplayMuteToggle()
         {
             try
             {
-                Command command = muted ? Command.VideoMuteOn : Command.VideoMuteOff;
+                Command command = Info.DisplayMuteState ? Command.VideoMuteOff : Command.VideoMuteOn;
                 var response = await Client!.SendCommandAsync(command);
                 if ( response.IndicatesCommandFailure )
                     throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6],
                         command);
-
-                Info.DisplayMuteState = muted;
-                NotifyObservers(string.Format("Video mute {0}", ( muted ? "ON" : "OFF" )));
+                Info.DisplayMuteState = !Info.DisplayMuteState;
+                NotifyObservers(string.Format("Video mute {0}", (Info.DisplayMuteState ? "on" : "off")));
             }
             catch ( Exception ex )
             {
@@ -671,12 +565,12 @@ namespace Cave.DeviceControllers.Projectors.NEC
 
         /// <summary>
         /// Implements <see cref="IAudio.AudioVolumeUp"/>.
-        /// Tries to increase the audio volume by 1 unit.
+        /// Tries to increase the audio volume by 2 units.
         /// </summary>
         /// <exception cref="NECProjectorCommandException">Thrown if the device
         /// fails to execute the command, such as when the device is in a
         /// state which prevents execution of that command.</exception>
-        public async override Task AudioVolumeUp()
+        public override async Task AudioVolumeUp()
         {
             try
             {   
@@ -697,12 +591,12 @@ namespace Cave.DeviceControllers.Projectors.NEC
 
         /// <summary>
         /// Implements <see cref="IAudio.AudioVolumeDown"/>.
-        /// Tries to decrease the audio volume by 1 unit.
+        /// Tries to decrease the audio volume by 2 units.
         /// </summary>
         /// <exception cref="NECProjectorCommandException">Thrown if the device
         /// fails to execute the command, such as when the device is in a
         /// state which prevents execution of that command.</exception>
-        public async override Task AudioVolumeDown()
+        public override async Task AudioVolumeDown()
         {
             try
             {
@@ -722,26 +616,23 @@ namespace Cave.DeviceControllers.Projectors.NEC
         }
 
         /// <summary>
-        /// Implements <see cref="IAudio.AudioMute"/>.
-        /// Tries to set the audio muting state of the device to on or off
-        /// according to the value of <paramref name="muted"/>.
+        /// Implements <see cref="IAudio.AudioMuteToggle"/>.
+        /// Tries to toggle the audio muting state of the device.
         /// </summary>
-        /// <param name="muted">True to mute the audio, false to unmute it.</param>
         /// <exception cref="NECProjectorCommandException">Thrown if the device
         /// fails to execute the command, such as when the device is in a
         /// state which prevents execution of that command.</exception>
-        public async override Task AudioMute( bool muted )
+        public override async Task AudioMuteToggle()
         {
             try
             {
-                Command command = muted ? Command.AudioMuteOn : Command.AudioMuteOff;
+                Command command = Info.AudioMuteState ? Command.AudioMuteOff : Command.AudioMuteOn;
                 var response = await Client!.SendCommandAsync(command);
                 if ( response.IndicatesCommandFailure )
                     throw NECProjectorCommandException.CreateNewFromValues(response.Data[5], response.Data[6],
                         command);
-
-                Info.AudioMuteState = muted;
-                NotifyObservers(string.Format("Audio mute {0}", ( muted ? "ON" : "OFF" )));
+                Info.AudioMuteState = !Info.AudioMuteState;
+                NotifyObservers(string.Format("Audio mute {0}", ( Info.AudioMuteState ? "on" : "off" )));
             }
             catch ( Exception ex )
             {
@@ -755,7 +646,7 @@ namespace Cave.DeviceControllers.Projectors.NEC
         /// Gets whether the device's audio is currently muted or not.
         /// </summary>
         /// <returns>True if the audio is muted, false if not.</returns>
-        public async override Task<bool> IsAudioMuted()
+        public override async Task<bool> IsAudioMuted()
         {
             try
             {

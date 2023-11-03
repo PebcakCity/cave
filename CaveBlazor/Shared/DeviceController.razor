@@ -19,9 +19,6 @@
     {
         foreach( var input in TestInputs )
         {
-            // Need to research the order of things getting set/instantiated in Blazor...
-            // Even though LastInputSelected is given a starting non-null value, trying
-            // to access it here without ? results in a null reference exception?
             <button
                 class='btn @(LastInputSelected?.ToString() == input ? "btn-primary" : "btn-secondary")'
                 @onclick="@(() => SelectInput(input))"
@@ -35,11 +32,7 @@
         <button class="btn btn-danger" @onclick="@DisplayPowerOff">Power Off</button>
         if ( display is IDisplayMutable idm )
         {
-            // If we ever switch back to nullable bool, this becomes
-            // ... class='btn @((DisplayMuted ?? false) ? "btn-secondary" : "btn-primary")'
-            // ... @onclick="@(() => DisplayMute(!(DisplayMuted ?? false)))"
-
-            <button class="@(DisplayMuted ? "btn btn-secondary" : "btn btn-primary")" @onclick="@(() => DisplayMute(!DisplayMuted))">
+            <button class="@(DisplayMuted ? "btn btn-secondary" : "btn btn-primary")" @onclick="DisplayMuteToggle">
                 Display mute on/off
             </button>
 
@@ -172,12 +165,12 @@ else
         catch { }
     }
 
-    private async Task DisplayMute( bool muted )
+    private async Task DisplayMuteToggle()
     {
         try
         {
             IDisplayMutable idm = Device as IDisplayMutable;
-            await idm.DisplayMute( muted );
+            await idm.DisplayMuteToggle();
         }
         catch { }
     }

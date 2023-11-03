@@ -4,9 +4,7 @@ using UI = Gtk.Builder.ObjectAttribute;
 using NLog;
 
 using Cave.DeviceControllers;
-using Cave.DeviceControllers.Projectors;
 using Cave.DeviceControllers.Projectors.NEC;
-using Cave.DeviceControllers.Televisions;
 using Cave.DeviceControllers.Televisions.Roku;
 using Cave.Interfaces;
 using Cave.Utils;
@@ -180,7 +178,6 @@ namespace Cave.DisplayTester
                 ButtonOn,
                 ButtonOff,
                 ButtonExecute,
-                ButtonClear,
                 EntryDebugCommand
                 );
 
@@ -188,8 +185,9 @@ namespace Cave.DisplayTester
                 ButtonConnect,
                 ComboBoxDeviceClass,
                 EntryAddress,
-                EntryPort
-                );
+                EntryPort,
+                ButtonClear     // Disabling GridControls disables this one too, 
+                );              // it must be moved out of GridControls to work independently
         }
 
         private void WindowDeleteEventHandler( object sender, DeleteEventArgs args )
@@ -290,7 +288,6 @@ namespace Cave.DisplayTester
                 ButtonMute,
                 GridControls,
                 ButtonExecute,
-                ButtonClear,
                 EntryDebugCommand
             );
 
@@ -605,7 +602,7 @@ namespace Cave.DisplayTester
             {
                 if ( DisplayDevice is Projector pj )
                 {
-                    await pj.DisplayMute(!this.IsDisplayMuted);
+                    await pj.DisplayMuteToggle();
                 }
             }
             catch ( Exception ex )
@@ -620,7 +617,7 @@ namespace Cave.DisplayTester
             {
                 if ( DisplayDevice is IAudio ia )
                 {
-                    await ia.AudioMute(!this.IsAudioMuted);
+                    await ia.AudioMuteToggle();
                 }
             }
             catch ( Exception ex )

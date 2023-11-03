@@ -629,20 +629,14 @@ namespace Cave.DeviceControllers.Televisions.Roku
         }
 
         /// <summary>
-        /// Implements <see cref="IAudio.AudioMute"/>.
-        /// Toggles mute on/off.  <paramref name="muted"/> parameter is ignored
-        /// for this class (and probably most TVs) as there is no apparent way
-        /// to retrieve mute state.
+        /// Implements <see cref="IAudio.AudioMuteToggle"/>.
+        /// Toggles audio mute on/off.
         /// </summary>
-        /// <param name="muted">Ignored</param>
-        /// <returns></returns>
-        public override async Task AudioMute(bool muted)
+        public override async Task AudioMuteToggle()
         {
             try
             {
                 await KeyPress("VolumeMute");
-                // Without the device reporting the state of audio muting,
-                // the best we can do is toggle the state on/off and hope it's right. 50/50
                 Info.AudioMuteState = !Info.AudioMuteState;
                 NotifyObservers();
             }

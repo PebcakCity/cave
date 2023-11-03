@@ -6,7 +6,6 @@ using NLog;
 using Cave.DeviceControllers;
 using Cave.DeviceControllers.Projectors.NEC;
 using System.Threading.Tasks;
-using Cave.DeviceControllers.Projectors;
 
 /*
 Where to go from here with the GTK app:
